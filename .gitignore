@@ -1,0 +1,23 @@
+# Dependencies
+Frontend/node_modules/
+node_modules/
+
+# Expo
+Frontend/.expo/
+Frontend/dist/
+Frontend/web-build/
+
+# Environment
+Frontend/.env
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
