@@ -4,7 +4,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
 import { CallButton } from '../../components/CallButton';
-import { EmptyState, Pill, SearchField } from '../../components/ui';
+import { EmptyState, FilterChips, Pill, SearchField } from '../../components/ui';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
@@ -14,13 +14,16 @@ export default function LeadsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const [stage, setStage] = useState('All');
+  const stages = ['All', 'New', 'Contacted', 'Follow-up', 'Interested', 'Booking Confirmed'];
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return data.leads.filter((lead) => {
+      if (stage !== 'All' && lead.status !== stage) return false;
       if (!needle) return true;
-      return `${lead.name} ${lead.mobile} ${lead.pickup} ${lead.drop} ${lead.requirement} ${lead.status}`.toLowerCase().includes(needle);
+      return `${lead.name} ${lead.mobile} ${lead.pickup} ${lead.drop} ${lead.requirement} ${lead.status} ${lead.source}`.toLowerCase().includes(needle);
     });
-  }, [data.leads, query]);
+  }, [data.leads, query, stage]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -33,11 +36,13 @@ export default function LeadsScreen() {
           <Text style={styles.addText}>Add</Text>
         </Pressable>
       </View>
-      <SearchField value={query} onChangeText={setQuery} placeholder="Search leads" />
+      <SearchField value={query} onChangeText={setQuery} placeholder="Search name, phone, ID" />
+      <FilterChips options={stages} value={stage} onChange={setStage} />
       <FlatList
         data={rows}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 12 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 12 }}
         ListEmptyComponent={<EmptyState title="No leads match" body="New assignments from the CRM appear here." actionLabel="Add lead" onAction={() => router.push('/lead/new')} />}
         renderItem={({ item }) => (
           <Pressable onPress={() => router.push(`/lead/${item.id}`)} style={({ pressed }) => [styles.card, pressed && { opacity: 0.82 }]}>
@@ -45,7 +50,8 @@ export default function LeadsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.meta}>{formatPhone(item.mobile)}</Text>
-              <Text style={styles.route}>{item.requirement}</Text>
+              <Text style={styles.route}>{item.requirement} · {item.source} · {item.assignedTo}</Text>
+              {item.estimatedValue != null ? <Text style={styles.meta}>Est. ₹{item.estimatedValue}</Text> : null}
               <View style={styles.pillRow}>
                 <Pill label={item.status} />
                 <Text style={styles.follow}>Follow-up {item.travelDate.slice(5)}</Text>

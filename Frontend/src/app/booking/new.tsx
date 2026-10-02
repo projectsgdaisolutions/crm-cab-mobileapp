@@ -6,7 +6,7 @@ import { ymd } from '../../lib/dates';
 import { makeId } from '../../lib/ids';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
-import { VEHICLE_TYPES, type Booking, type EntityType, type VehicleType } from '../../types';
+import { BOOKING_STATUSES, PAYMENT_STATUSES, VEHICLE_TYPES, type Booking, type BookingStatus, type EntityType, type PaymentStatus, type VehicleType } from '../../types';
 
 export default function BookingFormScreen() {
   const params = useLocalSearchParams<{ entityType?: string; entityId?: string }>();
@@ -26,6 +26,10 @@ export default function BookingFormScreen() {
   const [vehicleType, setVehicleType] = useState<VehicleType>('Sedan');
   const [passengers, setPassengers] = useState('2');
   const [fare, setFare] = useState('800');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('Unpaid');
+  const [status, setStatus] = useState<BookingStatus>('Enquiry');
+  const [driver, setDriver] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
   const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
 
@@ -44,7 +48,11 @@ export default function BookingFormScreen() {
         <Field label="Travel time" value={travelTime} onChangeText={setTravelTime} />
         <ChoiceRow label="Vehicle" options={VEHICLE_TYPES} value={vehicleType} onChange={setVehicleType} />
         <Field label="Passengers" value={passengers} onChangeText={setPassengers} keyboardType="number-pad" />
-        <Field label="Fare (INR)" value={fare} onChangeText={setFare} keyboardType="number-pad" />
+        <Field label="Fare (INR) *" value={fare} onChangeText={setFare} keyboardType="number-pad" />
+        <ChoiceRow label="Booking status" options={BOOKING_STATUSES} value={status} onChange={setStatus} />
+        <ChoiceRow label="Payment status" options={PAYMENT_STATUSES} value={paymentStatus} onChange={setPaymentStatus} />
+        <Field label="Driver / vehicle details" value={driver} onChangeText={setDriver} placeholder="Driver name" />
+        <Field label="Vehicle number" value={vehicleNumber} onChangeText={setVehicleNumber} placeholder="MH 01 AB 1234" />
         <Field label="Remarks" value={remarks} onChangeText={setRemarks} multiline />
         {error ? <Text style={{ color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 }}>{error}</Text> : null}
         <Button
@@ -67,8 +75,10 @@ export default function BookingFormScreen() {
               vehicleType,
               passengers: Math.max(1, Number(passengers) || 1),
               fare: Math.max(0, Number(fare) || 0),
-              paymentStatus: 'Unpaid',
-              status: 'Enquiry',
+              paymentStatus,
+              status,
+              driver: driver.trim() || undefined,
+              vehicleNumber: vehicleNumber.trim() || undefined,
               remarks: remarks.trim(),
               createdBy: session?.name ?? 'Calling executive',
               createdAt: new Date().toISOString(),

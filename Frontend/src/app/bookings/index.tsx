@@ -32,7 +32,8 @@ export default function BookingsScreen() {
                 <Pill label={item.status} />
               </View>
               <Text style={{ fontFamily: fonts.medium, color: colors.ink, marginTop: 6 }}>{item.pickup} → {item.drop}</Text>
-              <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{formatDay(item.travelDate)} {item.travelTime} · {item.vehicleType} · {inr(item.fare)} · {item.paymentStatus}</Text>
+              <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{formatDay(item.travelDate)} {item.travelTime} · {item.vehicleType} · {item.passengers} passengers · {inr(item.fare)} · {item.paymentStatus}</Text>
+              <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 2 }}>{item.id} · {item.createdBy}{item.driver ? ` · ${item.driver}` : ''}</Text>
             </Card>
           </Pressable>
         ))}

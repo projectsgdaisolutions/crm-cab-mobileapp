@@ -36,9 +36,11 @@ export default function CustomerDetailScreen() {
         <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>{formatPhone(customer.mobile)}</Text>
         {customer.alternate ? <Muted>Alt {formatPhone(customer.alternate)}</Muted> : null}
         {customer.email ? <Muted>{customer.email}</Muted> : null}
+        {customer.city ? <Muted>{customer.city}</Muted> : null}
         <Text style={{ marginTop: 10, fontFamily: fonts.medium, color: colors.ink }}>{customer.pickup} → {customer.drop}</Text>
         {customer.address ? <Muted>{customer.address}</Muted> : null}
-        <Muted style={{ marginTop: 8 }}>Source {customer.source} · {customer.assignedTo}</Muted>
+        <Muted style={{ marginTop: 8 }}>Source {customer.source} · Assigned {customer.assignedTo}</Muted>
+        {customer.notes ? <Text style={{ marginTop: 8, fontFamily: fonts.regular, color: colors.ink }}>{customer.notes}</Text> : null}
       </Card>
       <View style={{ marginHorizontal: 20 }}>
         <ChoiceRow

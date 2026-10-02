@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "Cab CRM",
-    "slug": "cab-crm",
+    "name": "VehicoCRM",
+    "slug": "vehicocrm",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "cabcrm",
+    "scheme": "vehicocrm",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gdaisolutions.cabcrm"
+      "bundleIdentifier": "com.gdaisolutions.vehicocrm"
     },
     "android": {
-      "package": "com.gdaisolutions.cabcrm",
+      "package": "com.gdaisolutions.vehicocrm",
       "permissions": [
         "android.permission.READ_CALL_LOG",
         "android.permission.READ_PHONE_STATE",
@@ -57,7 +57,7 @@
       "./plugins/withDialerQueries.js"
     ],
     "extra": {
-      "description": "Calling executive mobile app for the Cab Service CRM."
+      "description": "VehicoCRM — Smart CRM for Vehicle Businesses."
     }
   }
 }

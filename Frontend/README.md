@@ -30,9 +30,11 @@ Expo Go can place a `tel:` call on a phone, but `READ_CALL_LOG` is only availabl
 
 Used when no API address is set:
 
-- Email: `priya.sharma@gdaisolutions.com`
-- Mobile: `9820098200`
-- Password: `Cab@1234`
+- Calling executive: `priya.sharma@gdaisolutions.com` or mobile `9820098200`
+- Admin (team management): `admin@gdaisolutions.com`
+- Password for both: `Cab@1234`
+
+The admin profile opens Team and users. Add a calling executive with name, email, phone, a password of at least 12 characters, and Active or Inactive. Deactivate and Activate sit on each executive card. New executives can sign in on this phone with that password while no API is configured. Inactive accounts cannot sign in.
 
 Profile can point the app at a live API. Sign in again after saving the address so the session uses an API token.
 

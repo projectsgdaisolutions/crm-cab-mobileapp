@@ -4,6 +4,8 @@ import type { AppData, SessionUser } from '../types';
 export const DEMO_EMAIL = 'priya.sharma@gdaisolutions.com';
 export const DEMO_MOBILE = '9820098200';
 export const DEMO_PASSWORD = 'Cab@1234';
+export const ADMIN_EMAIL = 'admin@gdaisolutions.com';
+export const ADMIN_MOBILE = '9811100001';
 
 export const demoUser: SessionUser = {
   id: 'U-EX-01',
@@ -11,14 +13,29 @@ export const demoUser: SessionUser = {
   email: DEMO_EMAIL,
   mobile: '+91 98200 98200',
   role: 'calling_executive',
-  desk: 'Mumbai calling desk',
+  desk: 'VehicoCRM',
 };
 
-export function isDemoLogin(identifier: string, password: string): boolean {
+export const adminUser: SessionUser = {
+  id: 'U-AD-01',
+  name: 'Demo Admin',
+  email: ADMIN_EMAIL,
+  mobile: '+91 98111 00001',
+  role: 'admin',
+  desk: 'VehicoCRM',
+};
+
+export function demoUserFor(identifier: string, password: string): SessionUser | null {
+  if (password !== DEMO_PASSWORD) return null;
   const id = identifier.trim().toLowerCase();
   const digits = identifier.replace(/\D/g, '');
-  const idOk = id === DEMO_EMAIL || digits.endsWith(DEMO_MOBILE);
-  return idOk && password === DEMO_PASSWORD;
+  if (id === ADMIN_EMAIL || digits.endsWith(ADMIN_MOBILE)) return adminUser;
+  if (id === DEMO_EMAIL || digits.endsWith(DEMO_MOBILE)) return demoUser;
+  return null;
+}
+
+export function isDemoLogin(identifier: string, password: string): boolean {
+  return demoUserFor(identifier, password) !== null;
 }
 
 export function createSeed(now = new Date()): AppData {
@@ -593,6 +610,111 @@ export function createSeed(now = new Date()): AppData {
         at: stamp(-2, 11, 20),
         remarks: 'Marked lost after the fare objection.',
         actor,
+      },
+    ],
+    executives: [
+      {
+        id: 'U-AD-01',
+        name: 'Demo Admin',
+        email: ADMIN_EMAIL,
+        phone: '+91 98111 00001',
+        role: 'Admin',
+        active: true,
+        leadCount: 0,
+        callCount: 0,
+        conversionRate: 0,
+        lastActive: stamp(0, 9, 0),
+        createdAt: stamp(-200, 10, 0),
+      },
+      {
+        id: 'U-MG-01',
+        name: 'Kavita Menon',
+        email: 'kavita.menon@gdaisolutions.com',
+        phone: '+91 98200 44021',
+        role: 'Manager',
+        active: true,
+        leadCount: 18,
+        callCount: 64,
+        conversionRate: 22,
+        lastActive: stamp(-1, 17, 40),
+        createdAt: stamp(-120, 11, 0),
+      },
+      {
+        id: 'U-EX-01',
+        name: 'Priya Sharma',
+        email: DEMO_EMAIL,
+        phone: '+91 98200 98200',
+        role: 'Calling Executive',
+        active: true,
+        password: 'CabDesk@2026',
+        leadCount: 12,
+        callCount: 46,
+        conversionRate: 28,
+        lastActive: stamp(0, 8, 15),
+        createdAt: stamp(-90, 9, 30),
+      },
+      {
+        id: 'U-EX-02',
+        name: 'Sneha Reddy',
+        email: 'sneha.reddy@gdaisolutions.com',
+        phone: '+91 98456 77889',
+        role: 'Calling Executive',
+        active: true,
+        password: 'CabDesk@2026',
+        leadCount: 9,
+        callCount: 31,
+        conversionRate: 19,
+        lastActive: stamp(-1, 16, 5),
+        createdAt: stamp(-40, 12, 0),
+      },
+      {
+        id: 'U-EX-03',
+        name: 'Arjun Desai',
+        email: 'arjun.desai@gdaisolutions.com',
+        phone: '+91 99300 22114',
+        role: 'Calling Executive',
+        active: false,
+        password: 'CabDesk@2026',
+        leadCount: 4,
+        callCount: 11,
+        conversionRate: 8,
+        lastActive: 'Not signed in',
+        createdAt: stamp(-15, 14, 20),
+      },
+    ],
+    tasks: [
+      {
+        id: 'T-410',
+        title: 'Send quotation to corporate client',
+        description: 'Airport transfer quote for the Indiranagar account, including SUV and sedan options.',
+        priority: 'High',
+        status: 'Todo',
+        dueDate: today,
+        assignedTo: actor,
+        relatedTo: 'Ananya Iyer',
+        syncState: 'synced',
+      },
+      {
+        id: 'T-411',
+        title: 'Confirm tomorrow airport pickup',
+        description: 'Call Fatima and confirm terminal, flight time, and passenger count.',
+        priority: 'Urgent',
+        status: 'In Progress',
+        dueDate: today,
+        assignedTo: actor,
+        relatedTo: 'Fatima Qureshi',
+        syncState: 'synced',
+      },
+      {
+        id: 'T-408',
+        title: 'Review lost-lead remarks',
+        description: 'Check fare objections from the last two days before the evening report.',
+        priority: 'Medium',
+        status: 'Review',
+        dueDate: yesterday,
+        assignedTo: 'Sneha Reddy',
+        relatedTo: 'Leads',
+        syncState: 'local',
       },
     ],
   };

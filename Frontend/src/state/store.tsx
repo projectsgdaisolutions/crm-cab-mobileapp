@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 import { ApiError, api, pullDesk } from '../api/client';
-import { createSeed, demoUser, isDemoLogin } from '../data/seed';
+import { createSeed, demoUser, demoUserFor, isDemoLogin } from '../data/seed';
 import { makeId } from '../lib/ids';
 import type { DeviceCall } from '../lib/syncCalls';
 import { loadApiBase, loadDesk, loadSession, saveApiBase, saveDesk, saveSession } from '../storage/persist';
@@ -13,6 +13,7 @@ import type {
   CallStatus,
   Customer,
   EntityType,
+  Executive,
   FollowUp,
   FollowUpStatus,
   Lead,
@@ -21,6 +22,7 @@ import type {
   Recording,
   SessionUser,
   SyncState,
+  TaskItem,
 } from '../types';
 
 export interface CallTarget {
@@ -71,6 +73,8 @@ interface StoreValue {
   addNote: (input: Omit<Note, 'id' | 'createdAt' | 'createdBy' | 'syncState'>) => Promise<Note>;
   saveFollowUp: (input: FollowUp, creating: boolean) => Promise<FollowUp>;
   saveBooking: (input: Booking, creating: boolean) => Promise<Booking>;
+  saveExecutive: (input: Executive, creating: boolean) => Promise<Executive>;
+  saveTask: (input: TaskItem, creating: boolean) => Promise<TaskItem>;
   importDeviceCalls: (calls: Array<DeviceCall & { entityType?: EntityType; entityId?: string; entityName?: string; duplicate: boolean }>, createUnknown: boolean) => Promise<{ added: number; leads: number }>;
   attachRecording: (input: {
     callId?: string;
@@ -95,6 +99,17 @@ function actorName(session: SessionUser | null): string {
 
 function withSync<T extends { syncState: SyncState }>(row: T, state: SyncState): T {
   return { ...row, syncState: state };
+}
+
+function completeDesk(stored: AppData | null): AppData {
+  const seed = createSeed();
+  if (!stored) return seed;
+  return {
+    ...seed,
+    ...stored,
+    executives: stored.executives ?? seed.executives,
+    tasks: stored.tasks ?? seed.tasks,
+  };
 }
 
 async function push<T>(work: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; error: ApiError }> {
@@ -159,8 +174,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setApiBaseState(base);
       apiRef.current = base;
       if (storedDesk) {
-        setData(storedDesk);
-        dataRef.current = storedDesk;
+        const desk = completeDesk(storedDesk);
+        setData(desk);
+        dataRef.current = desk;
       }
       if (storedSession) {
         setSession(storedSession.user);
@@ -213,7 +229,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await saveSession({ token: result.token, user: result.user });
         try {
           const remote = await pullDesk(base, result.token);
-          commit({ ...createSeed(), ...remote, activities: dataRef.current.activities });
+          commit({
+            ...createSeed(),
+            ...remote,
+            activities: dataRef.current.activities,
+            executives: remote.executives ?? dataRef.current.executives,
+            tasks: remote.tasks ?? dataRef.current.tasks,
+          });
         } catch (error) {
           setNotice(error instanceof Error ? `${error.message} Showing the desk saved on this phone.` : 'Showing the desk saved on this phone.');
         }
@@ -225,14 +247,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setNotice('API is unreachable. Signed in to the on-device demo desk.');
       }
     }
-    if (!isDemoLogin(identifier, password)) {
-      throw new Error('Those credentials were not accepted. Use the calling executive account from the CRM, or the demo desk while no API is configured.');
+    const builtIn = demoUserFor(identifier, password);
+    if (builtIn) {
+      setSession(builtIn);
+      setToken('demo');
+      sessionRef.current = builtIn;
+      tokenRef.current = 'demo';
+      await saveSession({ token: 'demo', user: builtIn });
+      return;
     }
-    setSession(demoUser);
-    setToken('demo');
-    sessionRef.current = demoUser;
-    tokenRef.current = 'demo';
-    await saveSession({ token: 'demo', user: demoUser });
+    const id = identifier.trim().toLowerCase();
+    const digits = identifier.replace(/\D/g, '');
+    const match = dataRef.current.executives.find((person) => {
+      const phone = person.phone.replace(/\D/g, '');
+      return person.email.toLowerCase() === id || (digits.length >= 10 && phone.endsWith(digits.slice(-10)));
+    });
+    if (match && match.role === 'Calling Executive' && match.password === password) {
+      if (!match.active) throw new Error('This calling executive is inactive. An admin can activate the account from Team.');
+      const user: SessionUser = {
+        id: match.id,
+        name: match.name,
+        email: match.email,
+        mobile: match.phone,
+        role: 'calling_executive',
+        desk: 'VehicoCRM',
+      };
+      setSession(user);
+      setToken('demo');
+      sessionRef.current = user;
+      tokenRef.current = 'demo';
+      await saveSession({ token: 'demo', user });
+      return;
+    }
+    throw new Error('Those credentials were not accepted. Use the calling executive or admin account from the CRM API, or the executive credentials set up in this app.');
   }, [commit]);
 
   const forgotPassword = useCallback(async (identifier: string) => {
@@ -240,7 +287,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!trimmed) throw new Error('Enter the executive email or mobile number.');
     const base = apiRef.current.trim();
     if (!base) {
-      return 'Password reset is sent by the CRM API. No API address is configured, so nothing was emailed. The demo desk password is shown on the sign-in screen.';
+      return 'Password reset is sent by the CRM API. No API address is configured, so nothing was emailed. Use the credentials saved for this phone to sign in.';
     }
     const result = await api.forgotPassword(base, trimmed);
     return result.message || 'If this account is registered, the CRM will send reset instructions.';
@@ -277,7 +324,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const base = apiRef.current.trim();
     const current = tokenRef.current;
     if (!base || !current || current === 'demo') {
-      setNotice('This desk is stored on the phone. Add the CRM API address in Profile to pull live records.');
+      setNotice('This desk is stored on the phone. Add the CRM API address in Profile to pull live records from VehicoCRM.');
       return;
     }
     const remote = await pullDesk(base, current);
@@ -288,7 +335,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const restoreSample = useCallback(async () => {
     const next = createSeed();
     commit(next);
-    setNotice('Sample Mumbai desk restored on this phone.');
+    setNotice('Sample desk restored on this phone.');
   }, [commit]);
 
   const beginCall = useCallback((target: CallTarget, openedNative: boolean) => {
@@ -561,6 +608,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return row;
   }, [addActivity, patch]);
 
+  const saveExecutive = useCallback(async (input: Executive, creating: boolean) => {
+    const row = { ...input };
+    patch((current) => {
+      const executives = creating ? [row, ...current.executives] : current.executives.map((item) => (item.id === row.id ? row : item));
+      return addActivity(
+        { ...current, executives },
+        {
+          entityType: 'customer',
+          entityId: row.id,
+          type: creating ? 'Executive added' : row.active ? 'Executive updated' : 'Executive deactivated',
+          at: new Date().toISOString(),
+          remarks: `${row.name} · ${row.role} · ${row.active ? 'Active' : 'Inactive'}`,
+        },
+      );
+    });
+    return row;
+  }, [addActivity, patch]);
+
+  const saveTask = useCallback(async (input: TaskItem, creating: boolean) => {
+    const row = { ...input, syncState: 'local' as SyncState };
+    patch((current) => {
+      const tasks = creating ? [row, ...current.tasks] : current.tasks.map((item) => (item.id === row.id ? row : item));
+      return addActivity(
+        { ...current, tasks },
+        {
+          entityType: 'customer',
+          entityId: row.id,
+          type: creating ? 'Task added' : 'Task updated',
+          at: new Date().toISOString(),
+          remarks: `${row.title} · ${row.status}`,
+        },
+      );
+    });
+    return row;
+  }, [addActivity, patch]);
+
   const importDeviceCalls = useCallback(async (
     calls: Array<DeviceCall & { entityType?: EntityType; entityId?: string; entityName?: string; duplicate: boolean }>,
     createUnknown: boolean,
@@ -732,13 +815,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addNote,
     saveFollowUp,
     saveBooking,
+    saveExecutive,
+    saveTask,
     importDeviceCalls,
     attachRecording,
   }), [
     ready, session, token, data, apiBase, mode, notice, pendingCall, awaitingReturn,
     login, forgotPassword, logout, setApiBase, refresh, restoreSample, beginCall,
     openDisposition, dismissDisposition, saveDisposition, saveCustomer, saveLead,
-    addNote, saveFollowUp, saveBooking, importDeviceCalls, attachRecording,
+    addNote, saveFollowUp, saveBooking, saveExecutive, saveTask, importDeviceCalls, attachRecording,
   ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
