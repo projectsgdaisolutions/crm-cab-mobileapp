@@ -119,6 +119,7 @@ export function Field({
   secureTextEntry,
   multiline,
   error,
+  editable = true,
 }: {
   label: string;
   value: string;
@@ -128,6 +129,7 @@ export function Field({
   secureTextEntry?: boolean;
   multiline?: boolean;
   error?: string;
+  editable?: boolean;
 }) {
   return (
     <View style={{ marginBottom: 14 }}>
@@ -140,8 +142,9 @@ export function Field({
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         multiline={multiline}
+        editable={editable}
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
-        style={[styles.input, multiline && { minHeight: 96, textAlignVertical: 'top' }, error && { borderColor: colors.clay }]}
+        style={[styles.input, multiline && { minHeight: 96, textAlignVertical: 'top' }, !editable && { backgroundColor: '#F3F5FA', color: colors.ink }, error && { borderColor: colors.clay }]}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>

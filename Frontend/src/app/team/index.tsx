@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button, Card, ChoiceRow, Field, PageHeader, Pill, Screen } from '../../components/ui';
 import { makeId } from '../../lib/ids';
@@ -27,8 +28,10 @@ const MATRIX: Array<{ feature: string; admin: boolean; exec: boolean }> = [
 ];
 
 export default function TeamScreen() {
+  const params = useLocalSearchParams<{ create?: string }>();
   const { data, session, saveExecutive } = useStore();
   const isAdmin = session?.role === 'admin';
+  const openedCreate = useRef(false);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [editing, setEditing] = useState<Executive | null>(null);
@@ -59,6 +62,13 @@ export default function TeamScreen() {
     setError('');
     setOpen(true);
   }
+
+  useEffect(() => {
+    if (params.create === '1' && isAdmin && !openedCreate.current) {
+      openedCreate.current = true;
+      startCreate();
+    }
+  }, [params.create, isAdmin]);
 
   function startEdit(person: Executive) {
     setEditing(person);
@@ -114,7 +124,7 @@ export default function TeamScreen() {
             />
             <Field label="Email *" value={email} onChangeText={setEmail} placeholder="sneha@gdaisolutions.com" keyboardType="email-address" />
             <Field label="Phone *" value={phone} onChangeText={setPhone} placeholder="+91 98456 77889" keyboardType="phone-pad" />
-            <Field label="Role" value="Calling Executive" onChangeText={() => undefined} />
+            <Field label="Role" value="Calling Executive" onChangeText={() => undefined} editable={false} />
             <ChoiceRow label="Status" options={['Active', 'Inactive']} value={active} onChange={setActive} />
             <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginBottom: 10 }}>{ROLE_NOTE['Calling Executive']}</Text>
             {error ? <Text style={{ color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 }}>{error}</Text> : null}

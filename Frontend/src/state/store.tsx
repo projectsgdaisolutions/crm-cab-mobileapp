@@ -244,7 +244,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!(error instanceof ApiError) || !error.network || !isDemoLogin(identifier, password)) {
           throw error instanceof Error ? error : new Error('Sign in failed.');
         }
-        setNotice('API is unreachable. Signed in to the on-device demo desk.');
+        setNotice('API is unreachable. Signed in with the account saved on this phone.');
       }
     }
     const builtIn = demoUserFor(identifier, password);
@@ -279,7 +279,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await saveSession({ token: 'demo', user });
       return;
     }
-    throw new Error('Those credentials were not accepted. Use the calling executive or admin account from the CRM API, or the executive credentials set up in this app.');
+    throw new Error('Those credentials were not accepted. Use the account from the CRM API.');
   }, [commit]);
 
   const forgotPassword = useCallback(async (identifier: string) => {

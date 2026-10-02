@@ -47,7 +47,7 @@ export default function ProfileScreen() {
           <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{session?.role === 'admin' ? 'Admin' : 'Calling executive'}</Text>
           <Text style={{ fontFamily: fonts.medium, color: colors.ink, marginTop: 8 }}>{session?.email}</Text>
           <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{session?.mobile}</Text>
-          <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Demo session on this phone'}</Text>
+          <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Signed in on this phone'}</Text>
         </Card>
         <Field label="CRM API address" value={url} onChangeText={setUrl} placeholder="https://api.example.com" keyboardType="default" />
         {saved ? <Text style={{ fontFamily: fonts.medium, color: colors.forest }}>{saved}</Text> : null}
@@ -60,7 +60,15 @@ export default function ProfileScreen() {
           }}
         />
         {session?.role === 'admin' ? (
-          <RowLink icon="people-outline" title="Team & Users" detail="Add an executive, or Activate / Deactivate accounts" onPress={() => router.push('/team')} />
+          <Card>
+            <Text style={{ fontFamily: fonts.display, fontSize: 22, color: colors.ink }}>Team & Users</Text>
+            <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4, marginBottom: 12, lineHeight: 20 }}>
+              Add a calling executive, or activate and deactivate accounts.
+            </Text>
+            <Button label="Add executive" onPress={() => router.push('/team?create=1')} />
+            <View style={{ height: 8 }} />
+            <Button label="Open Team & Users" tone="ghost" onPress={() => router.push('/team')} />
+          </Card>
         ) : null}
         <RowLink icon="checkbox-outline" title="Tasks" detail="Due work for the desk" onPress={() => router.push('/tasks')} />
         <RowLink icon="document-text-outline" title="Notes" detail="Remarks on this desk" onPress={() => router.push('/notes')} />
