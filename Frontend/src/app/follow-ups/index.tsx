@@ -26,8 +26,11 @@ export default function FollowUpsScreen() {
 
   return (
     <Screen>
-      <PageHeader title="Follow-ups" subtitle="Today's and upcoming tasks" back={path !== '/followups'} />
-      <View style={{ height: 12 }} />
+      <PageHeader
+        title="Follow-ups"
+        subtitle={`${data.followUps.filter((item) => item.date === today && item.status !== 'Completed').length} today · ${data.followUps.filter((item) => isOverdueFollowUp(item.date, item.time, item.status)).length} overdue · ${data.followUps.filter((item) => item.date > today && (item.status === 'Pending' || item.status === 'Rescheduled')).length} upcoming`}
+        back={path !== '/followups'}
+      />
       <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
       <View style={{ padding: 20, gap: 10 }}>
         {rows.length === 0 ? <EmptyState title={`No ${filter.toLowerCase()} follow-ups`} body="Schedule the next call from a customer or lead so it shows on the desk." /> : null}
@@ -37,7 +40,9 @@ export default function FollowUpsScreen() {
               <Text style={{ flex: 1, fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>{item.entityName}</Text>
               <Pill label={isOverdueFollowUp(item.date, item.time, item.status) ? 'overdue' : item.status} />
             </View>
-            <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{formatDay(item.date)} · {item.time} · {item.type}</Text>
+            <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>
+              {formatDay(item.date)} · {item.time} · {item.channel ?? item.type}{item.priority ? ` · ${item.priority}` : ''}{item.assignedTo ? ` · ${item.assignedTo}` : ''}
+            </Text>
             <Text style={{ fontFamily: fonts.regular, color: colors.ink, marginTop: 6 }}>{item.remarks}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' }}>
               <CallButton compact target={{ name: item.entityName, mobile: item.mobile, entityType: item.entityType, entityId: item.entityId }} />

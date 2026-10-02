@@ -58,6 +58,9 @@ export default function RecordingsScreen() {
               </View>
               <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>
                 {formatWhen(item.recordedAt)} · {formatDuration(item.durationSec)} {item.fileName ? `· ${item.fileName}` : ''}
+                {item.fileSizeKb ? ` · ${item.fileSizeKb} KB` : ''}
+                {item.access ? ` · ${item.access}` : ''}
+                {item.executive ? ` · ${item.executive}` : ''}
               </Text>
               {item.note ? <Text style={{ fontFamily: fonts.regular, color: colors.ink, marginTop: 6 }}>{item.note}</Text> : null}
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>

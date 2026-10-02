@@ -49,6 +49,8 @@ export function toneFor(status: string): { bg: string; fg: string } {
       return { bg: colors.mossWash, fg: colors.moss };
     case 'VIP':
     case 'High':
+    case 'Hot':
+    case 'Urgent':
     case 'Interested':
     case 'Booking Confirmed':
     case 'Partial':
@@ -62,8 +64,11 @@ export function toneFor(status: string): { bg: string; fg: string } {
     case 'Failed':
     case 'failed':
     case 'Inactive':
+    case 'Churned':
+    case 'Rejected':
     case 'overdue':
     case 'unavailable':
+    case 'permission_denied':
       return { bg: colors.clayWash, fg: colors.clay };
     case 'New':
     case 'Enquiry':

@@ -253,11 +253,13 @@ export function SearchField({ value, onChangeText, placeholder }: { value: strin
 
 export function FilterChips({ options, value, onChange }: { options: string[]; value: string; onChange: (value: string) => void }) {
   return (
-    <View style={styles.filterRow}>
+    <View style={styles.filterBar}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, gap: 8, alignItems: 'center' }}
+        contentContainerStyle={styles.filterContent}
+        style={styles.filterScroll}
+        keyboardShouldPersistTaps="handled"
       >
         {options.map((option) => {
           const selected = option === value;
@@ -265,11 +267,11 @@ export function FilterChips({ options, value, onChange }: { options: string[]; v
             <Pressable
               key={option}
               onPress={() => onChange(option)}
-              android_ripple={{ color: 'transparent' }}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
               style={({ pressed }) => [
                 styles.filter,
                 selected && styles.filterOn,
-                pressed && !selected && styles.filterPressed,
+                pressed && { opacity: 0.65, transform: [{ scale: 0.96 }] },
               ]}
             >
               <Text style={[styles.filterText, selected && styles.filterTextOn]}>{option}</Text>
@@ -386,8 +388,8 @@ const styles = StyleSheet.create({
   buttonText: { color: colors.white, fontFamily: fonts.bold, fontSize: 16 },
   search: {
     marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 12,
+    marginTop: 14,
+    marginBottom: 10,
     backgroundColor: colors.paper,
     borderRadius: 16,
     borderWidth: 1,
@@ -398,34 +400,45 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, height: 46, color: colors.ink, fontFamily: fonts.medium, fontSize: 15 },
-  filterRow: {
+  filterBar: {
     height: 52,
+    flexShrink: 0,
     justifyContent: 'center',
-    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  filterScroll: {
+    flexGrow: 0,
+    height: 44,
+  },
+  filterContent: {
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 8,
   },
   filter: {
+    height: 40,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    height: 36,
+    paddingHorizontal: 16,
+    backgroundColor: colors.paper,
+    borderWidth: 1.5,
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.paper,
-    borderWidth: 1,
-    borderColor: colors.line,
+    flexShrink: 0,
   },
-  filterOn: { backgroundColor: colors.mint, borderColor: colors.mint },
-  filterPressed: { opacity: 0.72 },
-  filterText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted },
-  filterTextOn: { color: colors.ink },
+  filterOn: { backgroundColor: '#D6F5E8', borderColor: colors.moss },
+  filterText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted, includeFontPadding: false },
+  filterTextOn: { color: colors.moss },
   choiceWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   choice: {
+    height: 36,
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     backgroundColor: colors.paper,
     borderWidth: 1,
     borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   choiceOn: { backgroundColor: colors.mint, borderColor: colors.mint },
   choiceText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },

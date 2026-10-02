@@ -9,18 +9,24 @@ export type LeadStatus =
   | 'Converted'
   | 'Lost';
 
-export type CustomerStatus = 'Active' | 'Inactive' | 'VIP';
+export type CustomerStatus = 'Active' | 'VIP' | 'Inactive' | 'Lead' | 'Churned';
 export type FollowUpStatus = 'Pending' | 'Completed' | 'Rescheduled' | 'Cancelled';
 export type FollowUpType = 'Call' | 'Visit' | 'Message' | 'Booking';
+export type FollowUpChannel = 'Phone' | 'WhatsApp' | 'Email' | 'Visit';
+export type FollowUpPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type CallDirection = 'incoming' | 'outgoing';
-export type CallStatus = 'Answered' | 'Missed' | 'Busy' | 'Failed';
+export type CallStatus = 'Answered' | 'Missed' | 'Busy' | 'Rejected' | 'Failed';
 export type BookingStatus = 'Enquiry' | 'Confirmed' | 'Assigned' | 'Completed' | 'Cancelled';
-export type PaymentStatus = 'Unpaid' | 'Partial' | 'Paid';
+export type PaymentStatus = 'Unpaid' | 'Partial' | 'Paid' | 'Refunded';
 export type VehicleType = 'Sedan' | 'SUV' | 'Hatchback' | 'Innova' | 'Tempo Traveller';
-export type Priority = 'Low' | 'Medium' | 'High';
+export type Priority = 'Low' | 'Medium' | 'High' | 'Hot';
+export type TaskStatus = 'Todo' | 'In Progress' | 'Review' | 'Done';
+export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+export type TeamRole = 'Admin' | 'Manager' | 'Calling Executive';
+export type RecordingAccess = 'Public' | 'Manager' | 'Admin';
 export type SyncState = 'local' | 'synced' | 'failed';
 export type EntityType = 'customer' | 'lead';
-export type RecordingAvailability = 'available' | 'unavailable' | 'uploaded' | 'uploading' | 'failed';
+export type RecordingAvailability = 'available' | 'unavailable' | 'uploaded' | 'uploading' | 'failed' | 'processing' | 'permission_denied';
 
 export interface SessionUser {
   id: string;
@@ -38,6 +44,8 @@ export interface Customer {
   alternate?: string;
   email?: string;
   address?: string;
+  city?: string;
+  notes?: string;
   pickup: string;
   drop: string;
   source: string;
@@ -62,6 +70,11 @@ export interface Lead {
   assignedTo: string;
   status: LeadStatus;
   priority: Priority;
+  estimatedValue?: number;
+  nextFollowUpDate?: string;
+  nextFollowUpTime?: string;
+  remarks?: string;
+  location?: string;
   createdAt: string;
   updatedAt: string;
   syncState: SyncState;
@@ -87,6 +100,9 @@ export interface FollowUp {
   date: string;
   time: string;
   type: FollowUpType;
+  channel?: FollowUpChannel;
+  priority?: FollowUpPriority;
+  assignedTo?: string;
   remarks: string;
   status: FollowUpStatus;
   createdBy: string;
@@ -149,6 +165,37 @@ export interface Recording {
   remoteUrl?: string;
   note?: string;
   previewClip?: boolean;
+  access?: RecordingAccess;
+  fileSizeKb?: number;
+  executive?: string;
+  syncState: SyncState;
+}
+
+export interface Executive {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: TeamRole;
+  active: boolean;
+  /** Local demo password only. A live API would store this server-side. */
+  password?: string;
+  leadCount: number;
+  callCount: number;
+  conversionRate: number;
+  lastActive: string;
+  createdAt: string;
+}
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  description: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate: string;
+  assignedTo: string;
+  relatedTo?: string;
   syncState: SyncState;
 }
 
@@ -171,6 +218,8 @@ export interface AppData {
   calls: CallRecord[];
   recordings: Recording[];
   activities: Activity[];
+  executives: Executive[];
+  tasks: TaskItem[];
 }
 
 export const LEAD_STATUSES: LeadStatus[] = [
@@ -183,12 +232,30 @@ export const LEAD_STATUSES: LeadStatus[] = [
   'Lost',
 ];
 
-export const CUSTOMER_STATUSES: CustomerStatus[] = ['Active', 'Inactive', 'VIP'];
+export const CUSTOMER_STATUSES: CustomerStatus[] = ['Active', 'VIP', 'Inactive', 'Lead', 'Churned'];
 export const FOLLOW_UP_STATUSES: FollowUpStatus[] = ['Pending', 'Completed', 'Rescheduled', 'Cancelled'];
 export const FOLLOW_UP_TYPES: FollowUpType[] = ['Call', 'Visit', 'Message', 'Booking'];
-export const CALL_STATUSES: CallStatus[] = ['Answered', 'Missed', 'Busy', 'Failed'];
+export const FOLLOW_UP_CHANNELS: FollowUpChannel[] = ['Phone', 'WhatsApp', 'Email', 'Visit'];
+export const FOLLOW_UP_PRIORITIES: FollowUpPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
+export const CALL_STATUSES: CallStatus[] = ['Answered', 'Missed', 'Busy', 'Rejected', 'Failed'];
 export const BOOKING_STATUSES: BookingStatus[] = ['Enquiry', 'Confirmed', 'Assigned', 'Completed', 'Cancelled'];
-export const PAYMENT_STATUSES: PaymentStatus[] = ['Unpaid', 'Partial', 'Paid'];
+export const PAYMENT_STATUSES: PaymentStatus[] = ['Unpaid', 'Partial', 'Paid', 'Refunded'];
 export const VEHICLE_TYPES: VehicleType[] = ['Sedan', 'SUV', 'Hatchback', 'Innova', 'Tempo Traveller'];
-export const PRIORITIES: Priority[] = ['Low', 'Medium', 'High'];
-export const LEAD_SOURCES = ['Website', 'Justdial', 'Google', 'Reference', 'Walk-in', 'Repeat customer'];
+export const PRIORITIES: Priority[] = ['Low', 'Medium', 'High', 'Hot'];
+export const CAB_REQUIREMENTS = ['Airport Transfer', 'Outstation Cab', 'Hourly Rental', 'Corporate Travel', 'Wedding Car', 'City Taxi'];
+export const TASK_STATUSES: TaskStatus[] = ['Todo', 'In Progress', 'Review', 'Done'];
+export const TASK_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
+export const LEAD_SOURCES = [
+  'Website',
+  'Facebook',
+  'Instagram',
+  'Google Ads',
+  'Referral',
+  'Walk-in',
+  'Inbound Call',
+  'Outbound Call',
+  'Justdial',
+  'Google',
+  'Reference',
+  'Repeat customer',
+];

@@ -18,7 +18,10 @@ export default function DashboardScreen() {
   const missed = data.calls.filter((call) => call.status === 'Missed');
   const todaysCalls = data.calls.filter((call) => call.startedAt.slice(0, 10) === today);
   const newLeads = data.leads.filter((lead) => lead.status === 'New');
-  const recorded = data.recordings.filter((item) => item.availability === 'available' || item.availability === 'uploaded');
+  const converted = data.leads.filter((lead) => lead.status === 'Converted' || lead.status === 'Booking Confirmed').length;
+  const conversion = data.leads.length ? Math.round((converted / data.leads.length) * 100) : 0;
+  const upcomingBookings = data.bookings.filter((item) => item.status === 'Enquiry' || item.status === 'Confirmed' || item.status === 'Assigned').length;
+  const teamActive = data.executives.filter((person) => person.active).length;
   const first = session?.name.split(' ')[0] ?? 'there';
   const dateLine = new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -28,6 +31,8 @@ export default function DashboardScreen() {
     { icon: 'call-outline' as const, label: 'Call Customer', href: '/customers' },
     { icon: 'calendar-outline' as const, label: 'Schedule', href: '/follow-up/new' },
     { icon: 'car-outline' as const, label: 'Booking', href: '/booking/new' },
+    { icon: 'checkbox-outline' as const, label: 'Tasks', href: '/tasks' },
+    ...(session?.role === 'admin' ? [{ icon: 'people-circle-outline' as const, label: 'Add executive', href: '/team' }] : []),
   ];
 
   return (
@@ -67,7 +72,7 @@ export default function DashboardScreen() {
         <View style={styles.hero}>
           <View style={styles.heroTop}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroKicker}>Your calling desk</Text>
+              <Text style={styles.heroKicker}>VehicoCRM · Your calling desk</Text>
               <Text style={styles.heroTitle}>Keep the momentum going.</Text>
             </View>
             <Pressable onPress={() => router.push('/calls')} style={({ pressed }) => [styles.heroCall, pressed && styles.dim]}>
@@ -82,10 +87,14 @@ export default function DashboardScreen() {
         </View>
         <Text style={styles.section}>Overview</Text>
         <View style={styles.grid}>
-          <Stat icon="people" tint="#1FA971" value={data.leads.length} label="Assigned leads" onPress={() => router.push('/leads')} />
-          <Stat icon="flash" tint="#6D5BD0" value={newLeads.length} label="New leads" onPress={() => router.push('/leads')} />
-          <Stat icon="pulse" tint="#E07A2F" value={recorded.length} label="Recorded calls" onPress={() => router.push('/recordings')} />
-          <Stat icon="calendar" tint="#6D5BD0" value={pending.length} label="Pending follow-ups" onPress={() => router.push('/followups')} />
+          <Stat icon="people" tint="#1FA971" value={data.customers.length} label="Total customers" onPress={() => router.push('/customers')} />
+          <Stat icon="clipboard" tint="#6D5BD0" value={data.leads.length} label="Total leads" onPress={() => router.push('/leads')} />
+          <Stat icon="flash" tint="#E07A2F" value={newLeads.length} label="New leads" onPress={() => router.push('/leads')} />
+          <Stat icon="call" tint="#1FA971" value={todaysCalls.length} label="Calls today" onPress={() => router.push('/calls')} />
+          <Stat icon="calendar" tint="#6D5BD0" value={pending.length} label="Follow-ups due" onPress={() => router.push('/followups')} />
+          <Stat icon="car" tint="#E07A2F" value={upcomingBookings} label="Upcoming bookings" onPress={() => router.push('/bookings')} />
+          <Stat icon="pulse" tint="#6D5BD0" value={conversion} label="Conversion rate %" onPress={() => router.push('/leads')} />
+          <Stat icon="people-circle" tint="#1FA971" value={teamActive} label="Team activity" onPress={() => router.push(session?.role === 'admin' ? '/team' : '/profile')} />
         </View>
         <View style={styles.sectionRow}>
           <Text style={styles.section}>Recent activities</Text>
@@ -103,10 +112,13 @@ export default function DashboardScreen() {
         </View>
         {data.calls.slice(0, 3).map((call) => (
           <Pressable key={call.id} onPress={() => router.push('/calls')} style={({ pressed }) => [styles.callRow, pressed && styles.dim]}>
+            <View style={styles.dirIcon}>
+              <Ionicons name={call.direction === 'incoming' ? 'arrow-down' : 'arrow-up'} size={16} color={call.direction === 'incoming' ? colors.phone : colors.saffron} />
+            </View>
             <Avatar name={call.name} size={40} />
             <View style={{ flex: 1 }}>
               <Text style={styles.callName}>{call.name}</Text>
-              <Text style={styles.callMeta}>{formatPhone(call.mobile)}</Text>
+              <Text style={styles.callMeta}>{call.direction === 'incoming' ? 'Incoming' : 'Outgoing'} · {formatPhone(call.mobile)}</Text>
             </View>
             <Text style={styles.callTime}>{formatWhen(call.startedAt).split(',')[0] === 'Today' ? new Date(call.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : formatWhen(call.startedAt)}</Text>
           </Pressable>
@@ -167,6 +179,7 @@ const styles = StyleSheet.create({
   callRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   callName: { color: colors.ink, fontFamily: fonts.bold, fontSize: 15 },
   callMeta: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
+  dirIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   callTime: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12 },
   dim: { opacity: 0.72 },
 });

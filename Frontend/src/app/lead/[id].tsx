@@ -43,6 +43,9 @@ export default function LeadDetailScreen() {
         <Text style={{ marginTop: 10, fontFamily: fonts.medium, color: colors.ink }}>{lead.requirement}</Text>
         <Text style={{ marginTop: 8, fontFamily: fonts.medium, color: colors.ink }}>{lead.pickup} → {lead.drop}</Text>
         <Muted>{formatDay(lead.travelDate)} at {lead.travelTime} · {lead.source}</Muted>
+        <Muted>Assigned {lead.assignedTo}{lead.estimatedValue != null ? ` · Est. ₹${lead.estimatedValue}` : ''}</Muted>
+        {lead.nextFollowUpDate ? <Muted>Next follow-up {formatDay(lead.nextFollowUpDate)} {lead.nextFollowUpTime ?? ''}</Muted> : null}
+        {lead.remarks ? <Text style={{ marginTop: 8, fontFamily: fonts.regular, color: colors.ink }}>{lead.remarks}</Text> : null}
       </Card>
       <View style={{ marginHorizontal: 20 }}>
         <ChoiceRow

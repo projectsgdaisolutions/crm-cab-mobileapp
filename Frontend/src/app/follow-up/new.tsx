@@ -6,7 +6,7 @@ import { ymd } from '../../lib/dates';
 import { makeId } from '../../lib/ids';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
-import { FOLLOW_UP_TYPES, type EntityType, type FollowUp, type FollowUpType } from '../../types';
+import { FOLLOW_UP_CHANNELS, FOLLOW_UP_PRIORITIES, FOLLOW_UP_TYPES, type EntityType, type FollowUp, type FollowUpChannel, type FollowUpPriority, type FollowUpType } from '../../types';
 
 export default function FollowUpFormScreen() {
   const params = useLocalSearchParams<{ entityType?: string; entityId?: string; name?: string; mobile?: string }>();
@@ -21,6 +21,9 @@ export default function FollowUpFormScreen() {
   const [date, setDate] = useState(ymd(new Date()));
   const [time, setTime] = useState('11:00');
   const [type, setType] = useState<FollowUpType>('Call');
+  const [channel, setChannel] = useState<FollowUpChannel>('Phone');
+  const [priority, setPriority] = useState<FollowUpPriority>('Medium');
+  const [assignedTo, setAssignedTo] = useState(session?.name ?? '');
   const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
   const party = parties.find((item) => item.id === partyId);
@@ -36,8 +39,15 @@ export default function FollowUpFormScreen() {
         )) : null}
         <Field label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
         <Field label="Time" value={time} onChangeText={setTime} placeholder="HH:MM" />
-        <ChoiceRow label="Type" options={FOLLOW_UP_TYPES} value={type} onChange={setType} />
-        <Field label="Remarks" value={remarks} onChangeText={setRemarks} multiline />
+        <ChoiceRow label="Type" options={['Customer', 'Lead']} value={party?.type === 'lead' ? 'Lead' : 'Customer'} onChange={(kind) => {
+          const next = parties.find((item) => item.type === (kind === 'Lead' ? 'lead' : 'customer'));
+          if (next) setPartyId(next.id);
+        }} />
+        <ChoiceRow label="Channel" options={FOLLOW_UP_CHANNELS} value={channel} onChange={setChannel} />
+        <ChoiceRow label="Follow-up kind" options={FOLLOW_UP_TYPES} value={type} onChange={setType} />
+        <ChoiceRow label="Priority" options={FOLLOW_UP_PRIORITIES} value={priority} onChange={setPriority} />
+        <Field label="Assigned to" value={assignedTo} onChangeText={setAssignedTo} placeholder={session?.name ?? 'Calling executive'} />
+        <Field label="Notes" value={remarks} onChangeText={setRemarks} placeholder="Context, purpose, expected outcome" multiline />
         {error ? <Text style={{ color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 }}>{error}</Text> : null}
         <Button
           label="Save follow-up"
@@ -55,6 +65,9 @@ export default function FollowUpFormScreen() {
               date,
               time,
               type,
+              channel,
+              priority,
+              assignedTo: assignedTo.trim() || session?.name,
               remarks: remarks.trim(),
               status: 'Pending',
               createdBy: session?.name ?? 'Calling executive',
