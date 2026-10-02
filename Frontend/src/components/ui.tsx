@@ -180,6 +180,82 @@ export function ChoiceRow<T extends string>({
   );
 }
 
+export function SelectField<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  error,
+}: {
+  label: string;
+  options: readonly T[];
+  value: T;
+  onChange: (value: T) => void;
+  error?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ marginBottom: 14, zIndex: open ? 20 : 1 }}>
+      <Text style={styles.label}>{label}</Text>
+      <Pressable
+        onPress={() => setOpen(!open)}
+        style={[styles.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, error ? { borderColor: colors.clay } : null]}
+      >
+        <Text style={{ fontFamily: fonts.medium, fontSize: 16, color: value ? colors.ink : colors.faint }}>
+          {value || 'Select option'}
+        </Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={colors.muted} />
+      </Pressable>
+      {open ? (
+        <View
+          style={{
+            marginTop: 4,
+            backgroundColor: colors.paper,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: colors.line,
+            shadowColor: '#1B2340',
+            shadowOpacity: 0.1,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 4,
+            maxHeight: 200,
+            overflow: 'hidden',
+          }}
+        >
+          <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+            {options.map((opt) => (
+              <Pressable
+                key={opt}
+                onPress={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                style={({ pressed }) => [
+                  {
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    backgroundColor: opt === value ? '#E7EFEA' : pressed ? '#F5F5F5' : colors.paper,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  },
+                ]}
+              >
+                <Text style={{ fontFamily: opt === value ? fonts.semibold : fonts.medium, fontSize: 15, color: colors.ink }}>
+                  {opt}
+                </Text>
+                {opt === value ? <Ionicons name="checkmark" size={18} color={colors.forest} /> : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+    </View>
+  );
+}
+
 export function Button({
   label,
   onPress,
