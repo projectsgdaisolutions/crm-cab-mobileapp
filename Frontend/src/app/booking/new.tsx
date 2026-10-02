@@ -17,8 +17,10 @@ export default function BookingFormScreen() {
     ...data.leads.map((item) => ({ type: 'lead' as const, id: item.id, name: item.name, mobile: item.mobile, pickup: item.pickup, drop: item.drop })),
   ];
   const initial = parties.find((item) => item.id === params.entityId) ?? parties[0];
+  const [kind, setKind] = useState<'Customer' | 'Lead'>(initial?.type === 'lead' ? 'Lead' : 'Customer');
   const [partyId, setPartyId] = useState(initial?.id ?? '');
-  const party = parties.find((item) => item.id === partyId);
+  const visible = parties.filter((item) => item.type === (kind === 'Lead' ? 'lead' : 'customer'));
+  const party = parties.find((item) => item.id === partyId) ?? visible[0];
   const [pickup, setPickup] = useState(initial?.pickup ?? '');
   const [drop, setDrop] = useState(initial?.drop ?? '');
   const [travelDate, setTravelDate] = useState(ymd(new Date()));
@@ -35,25 +37,46 @@ export default function BookingFormScreen() {
 
   return (
     <Screen>
-      <PageHeader title="New booking" subtitle={party?.name} back />
+      <PageHeader title="New booking" subtitle={party?.name ?? 'Customer or lead'} back />
       <View style={{ padding: 20 }}>
-        {!params.entityId ? parties.slice(0, 6).map((item) => (
-          <Pressable key={item.id} onPress={() => { setPartyId(item.id); setPickup(item.pickup); setDrop(item.drop); }}>
-            <Text style={{ paddingVertical: 6, fontFamily: fonts.semibold, color: item.id === partyId ? colors.saffronDeep : colors.ink }}>{item.name}</Text>
+        <ChoiceRow
+          label="Customer or lead type *"
+          options={['Customer', 'Lead']}
+          value={kind}
+          onChange={(next) => {
+            setKind(next);
+            const match = parties.find((item) => item.type === (next === 'Lead' ? 'lead' : 'customer'));
+            if (match) {
+              setPartyId(match.id);
+              setPickup(match.pickup);
+              setDrop(match.drop);
+            }
+          }}
+        />
+        <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginBottom: 6 }}>Customer / lead *</Text>
+        {(visible.length ? visible : parties).slice(0, 8).map((item) => (
+          <Pressable key={item.id} onPress={() => { setPartyId(item.id); setKind(item.type === 'lead' ? 'Lead' : 'Customer'); setPickup(item.pickup); setDrop(item.drop); }}>
+            <Text style={{ paddingVertical: 6, fontFamily: fonts.semibold, color: item.id === party?.id ? colors.saffronDeep : colors.ink }}>
+              {item.name} · {item.mobile}
+            </Text>
           </Pressable>
-        )) : null}
-        <Field label="Pickup" value={pickup} onChangeText={setPickup} />
-        <Field label="Drop" value={drop} onChangeText={setDrop} />
-        <Field label="Travel date" value={travelDate} onChangeText={setTravelDate} />
-        <Field label="Travel time" value={travelTime} onChangeText={setTravelTime} />
-        <ChoiceRow label="Vehicle" options={VEHICLE_TYPES} value={vehicleType} onChange={setVehicleType} />
-        <Field label="Passengers" value={passengers} onChangeText={setPassengers} keyboardType="number-pad" />
-        <Field label="Fare (INR) *" value={fare} onChangeText={setFare} keyboardType="number-pad" />
+        ))}
+        <Field label="Mobile number *" value={party?.mobile ?? ''} onChangeText={() => undefined} editable={false} />
+        <Field label="Travel date *" value={travelDate} onChangeText={setTravelDate} placeholder="YYYY-MM-DD" />
+        <Field label="Travel time *" value={travelTime} onChangeText={setTravelTime} placeholder="HH:MM" />
+        <Field label="Pickup location *" value={pickup} onChangeText={setPickup} placeholder="Bengaluru Airport, Terminal 1" />
+        <Field label="Drop location *" value={drop} onChangeText={setDrop} placeholder="MG Road, Bengaluru" />
+        <ChoiceRow label="Cab / vehicle type *" options={VEHICLE_TYPES} value={vehicleType} onChange={setVehicleType} />
+        <Field label="Passenger count *" value={passengers} onChangeText={setPassengers} keyboardType="number-pad" />
+        <Field label="Fare *" value={fare} onChangeText={setFare} keyboardType="number-pad" />
         <ChoiceRow label="Booking status" options={BOOKING_STATUSES} value={status} onChange={setStatus} />
         <ChoiceRow label="Payment status" options={PAYMENT_STATUSES} value={paymentStatus} onChange={setPaymentStatus} />
-        <Field label="Driver / vehicle details" value={driver} onChangeText={setDriver} placeholder="Driver name" />
+        <Field label="Driver / vehicle details" value={driver} onChangeText={setDriver} placeholder="Driver name and vehicle notes" multiline />
         <Field label="Vehicle number" value={vehicleNumber} onChangeText={setVehicleNumber} placeholder="MH 01 AB 1234" />
         <Field label="Remarks" value={remarks} onChangeText={setRemarks} multiline />
+        <Field label="Booking ID" value="Generated on save" onChangeText={() => undefined} editable={false} />
+        <Field label="Created by" value={session?.name ?? 'Signed-in user'} onChangeText={() => undefined} editable={false} />
+        <Field label="Created date" value="Generated on save" onChangeText={() => undefined} editable={false} />
         {error ? <Text style={{ color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 }}>{error}</Text> : null}
         <Button
           label="Create booking"

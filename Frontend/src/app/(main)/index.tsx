@@ -32,7 +32,7 @@ export default function DashboardScreen() {
     { icon: 'calendar-outline' as const, label: 'Schedule', href: '/follow-up/new' },
     { icon: 'car-outline' as const, label: 'Booking', href: '/booking/new' },
     { icon: 'checkbox-outline' as const, label: 'Tasks', href: '/tasks' },
-    ...(session?.role === 'admin' ? [{ icon: 'people-circle-outline' as const, label: 'Add executive', href: '/team' }] : []),
+    ...(session?.role === 'admin' ? [{ icon: 'people-circle-outline' as const, label: 'Add executive', href: '/team?create=1' }] : []),
   ];
 
   return (
@@ -72,7 +72,7 @@ export default function DashboardScreen() {
         <View style={styles.hero}>
           <View style={styles.heroTop}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroKicker}>VehicoCRM · Your calling desk</Text>
+              <Text style={styles.heroKicker}>VehicoCRM · Smart CRM for Vehicle Businesses</Text>
               <Text style={styles.heroTitle}>Keep the momentum going.</Text>
             </View>
             <Pressable onPress={() => router.push('/calls')} style={({ pressed }) => [styles.heroCall, pressed && styles.dim]}>

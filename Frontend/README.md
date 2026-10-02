@@ -26,17 +26,11 @@ npx expo run:android
 
 Expo Go can place a `tel:` call on a phone, but `READ_CALL_LOG` is only available in a build that includes the local `modules/call-sync` module.
 
-## Demo desk
+## Sign in
 
-Used when no API address is set:
+Live sign-in uses the executive or admin account from the CRM API. After you save an API address in Profile, sign in again so the session uses that API.
 
-- Calling executive: `priya.sharma@gdaisolutions.com` or mobile `9820098200`
-- Admin (team management): `admin@gdaisolutions.com`
-- Password for both: `Cab@1234`
-
-The admin profile opens Team and users. Add a calling executive with name, email, phone, a password of at least 12 characters, and Active or Inactive. Deactivate and Activate sit on each executive card. New executives can sign in on this phone with that password while no API is configured. Inactive accounts cannot sign in.
-
-Profile can point the app at a live API. Sign in again after saving the address so the session uses an API token.
+Admins open Profile and choose Team & Users, or tap Add executive on Home. The form matches the web screen: full name, initial password (at least 12 characters), email, phone, role locked to Calling Executive, and Active or Inactive. Each calling executive card has Activate and Deactivate.
 
 ```bash
 # mobile/.env
