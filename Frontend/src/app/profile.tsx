@@ -10,7 +10,7 @@ const PREFS_KEY = 'cabcrm.prefs.v1';
 const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'America/New_York', 'Europe/London'];
 
 export default function ProfileScreen() {
-  const { session, apiBase, setApiBase, logout, restoreSample, mode } = useStore();
+  const { session, apiBase, setApiBase, logout, restoreSample, mode, loadPreferences, savePreferences, updateAdminProfile } = useStore();
   const router = useRouter();
   const [url, setUrl] = useState(apiBase);
   const [saved, setSaved] = useState('');
@@ -22,21 +22,37 @@ export default function ProfileScreen() {
   const [bookingAlerts, setBookingAlerts] = useState(true);
 
   useEffect(() => {
-    void AsyncStorage.getItem(PREFS_KEY).then((raw) => {
-      if (!raw) return;
-      try {
-        const prefs = JSON.parse(raw) as { company?: string; timezone?: string; bio?: string; reminders?: boolean; leadAlerts?: boolean; bookingAlerts?: boolean };
-        if (prefs.company) setCompany(prefs.company);
-        if (prefs.timezone) setTimezone(prefs.timezone);
-        if (prefs.bio) setBio(prefs.bio);
-        if (typeof prefs.reminders === 'boolean') setReminders(prefs.reminders);
-        if (typeof prefs.leadAlerts === 'boolean') setLeadAlerts(prefs.leadAlerts);
-        if (typeof prefs.bookingAlerts === 'boolean') setBookingAlerts(prefs.bookingAlerts);
-      } catch {
-        // Ignore a damaged local preference file.
+    if (session?.timezone) setTimezone(session.timezone);
+    if (session?.bio) setBio(session.bio);
+    void (async () => {
+      const raw = await AsyncStorage.getItem(PREFS_KEY);
+      if (raw) {
+        try {
+          const prefs = JSON.parse(raw) as { company?: string; timezone?: string; bio?: string; reminders?: boolean; leadAlerts?: boolean; bookingAlerts?: boolean };
+          if (prefs.company) setCompany(prefs.company);
+          if (prefs.timezone) setTimezone(prefs.timezone);
+          if (prefs.bio) setBio(prefs.bio);
+          if (typeof prefs.reminders === 'boolean') setReminders(prefs.reminders);
+          if (typeof prefs.leadAlerts === 'boolean') setLeadAlerts(prefs.leadAlerts);
+          if (typeof prefs.bookingAlerts === 'boolean') setBookingAlerts(prefs.bookingAlerts);
+        } catch {
+          // Ignore a damaged local preference file.
+        }
       }
-    });
-  }, []);
+      if (mode !== 'api') return;
+      try {
+        const remote = await loadPreferences();
+        if (typeof remote.company === 'string') setCompany(remote.company);
+        if (typeof remote.timezone === 'string') setTimezone(remote.timezone);
+        if (typeof remote.bio === 'string') setBio(remote.bio);
+        if (typeof remote.reminders === 'boolean') setReminders(remote.reminders);
+        if (typeof remote.leadAlerts === 'boolean') setLeadAlerts(remote.leadAlerts);
+        if (typeof remote.bookingAlerts === 'boolean') setBookingAlerts(remote.bookingAlerts);
+      } catch {
+        // Keep the values already saved on this phone.
+      }
+    })();
+  }, [loadPreferences, mode, session?.bio, session?.timezone]);
 
   return (
     <Screen>
@@ -56,7 +72,7 @@ export default function ProfileScreen() {
           tone="forest"
           onPress={async () => {
             await setApiBase(url);
-            setSaved('Saved. Sign in again to use a live token.');
+            setSaved('Saved. Sign in again to use the CRM API.');
           }}
         />
         {session?.role === 'admin' ? (
@@ -76,7 +92,9 @@ export default function ProfileScreen() {
         <RowLink icon="sync-outline" title="Call log sync" detail="Match the handset log" onPress={() => router.push('/sync')} />
         <Card>
           <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>CRM preferences</Text>
-          <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 4, marginBottom: 8 }}>Saved on this phone. Nothing is sent until an API address is set.</Text>
+          <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 4, marginBottom: 8 }}>
+            {mode === 'api' ? 'Saved to this account on the CRM API.' : 'Saved on this phone. Nothing is sent until an API address is set.'}
+          </Text>
           <Field label="Company" value={company} onChangeText={setCompany} />
           <ChoiceRow label="Timezone" options={TIMEZONES} value={timezone} onChange={setTimezone} />
           <Field label="Bio" value={bio} onChangeText={setBio} multiline placeholder="How this desk should be described" />
@@ -87,7 +105,25 @@ export default function ProfileScreen() {
             label="Save preferences"
             tone="forest"
             onPress={async () => {
-              await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({ company, timezone, bio, reminders, leadAlerts, bookingAlerts }));
+              const prefs = { company, timezone, bio, reminders, leadAlerts, bookingAlerts };
+              await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+              if (mode === 'api' && session) {
+                try {
+                  await updateAdminProfile({
+                    name: session.name,
+                    email: session.email,
+                    phone: session.mobile,
+                    timezone,
+                    bio,
+                  });
+                  await savePreferences(prefs);
+                  setSaved('Preferences saved to the CRM API.');
+                  return;
+                } catch (error) {
+                  setSaved(error instanceof Error ? error.message : 'Could not save to the CRM API.');
+                  return;
+                }
+              }
               setSaved('Preferences saved on this phone.');
             }}
           />

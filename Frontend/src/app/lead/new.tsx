@@ -7,11 +7,11 @@ import { makeId } from '../../lib/ids';
 import { isPlausibleMobile } from '../../lib/phone';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
-import { CAB_REQUIREMENTS, LEAD_SOURCES, LEAD_STATUSES, PRIORITIES, type Lead, type LeadStatus, type Priority } from '../../types';
+import { API_LEAD_SOURCES, CAB_REQUIREMENTS, LEAD_SOURCES, LEAD_STATUSES, PRIORITIES, type Lead, type LeadStatus, type Priority } from '../../types';
 
 export default function LeadFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { data, saveLead, session } = useStore();
+  const { data, saveLead, session, mode } = useStore();
   const existing = data.leads.find((item) => item.id === id);
   const router = useRouter();
   const executives = data.executives.filter((person) => person.role === 'Calling Executive' && person.active).map((person) => person.name);
@@ -51,7 +51,7 @@ export default function LeadFormScreen() {
         <Field label="Travel date *" value={travelDate} onChangeText={setTravelDate} placeholder="YYYY-MM-DD" />
         <Field label="Travel time *" value={travelTime} onChangeText={setTravelTime} placeholder="HH:MM" />
         <Field label="Location" value={location} onChangeText={setLocation} placeholder="City or area" />
-        <ChoiceRow label="Source *" options={LEAD_SOURCES} value={source} onChange={setSource} />
+        <ChoiceRow label="Source *" options={mode === 'api' ? [...API_LEAD_SOURCES] : [...LEAD_SOURCES]} value={source} onChange={setSource} />
         <ChoiceRow label="Priority *" options={PRIORITIES} value={priority} onChange={setPriority} />
         <ChoiceRow label="Assigned executive *" options={assigneeOptions} value={assignedTo} onChange={setAssignedTo} />
         <ChoiceRow label="Status" options={LEAD_STATUSES} value={status} onChange={setStatus} />

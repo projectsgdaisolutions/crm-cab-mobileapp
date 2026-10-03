@@ -20,7 +20,7 @@ export type BookingStatus = 'Enquiry' | 'Confirmed' | 'Assigned' | 'Completed' |
 export type PaymentStatus = 'Unpaid' | 'Partial' | 'Paid' | 'Refunded';
 export type VehicleType = 'Sedan' | 'SUV' | 'Hatchback' | 'Innova' | 'Tempo Traveller';
 export type Priority = 'Low' | 'Medium' | 'High' | 'Hot';
-export type TaskStatus = 'Todo' | 'In Progress' | 'Review' | 'Done';
+export type TaskStatus = 'Pending' | 'In Progress' | 'Completed';
 export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type TeamRole = 'Admin' | 'Manager' | 'Calling Executive';
 export type RecordingAccess = 'Public' | 'Manager' | 'Admin';
@@ -35,6 +35,8 @@ export interface SessionUser {
   mobile: string;
   role: Role;
   desk: string;
+  timezone?: string;
+  bio?: string;
 }
 
 export interface Customer {
@@ -195,7 +197,10 @@ export interface TaskItem {
   status: TaskStatus;
   dueDate: string;
   assignedTo: string;
+  assignedToId?: string;
   relatedTo?: string;
+  relatedToType?: string;
+  relatedToId?: string;
   syncState: SyncState;
 }
 
@@ -243,8 +248,18 @@ export const PAYMENT_STATUSES: PaymentStatus[] = ['Unpaid', 'Partial', 'Paid', '
 export const VEHICLE_TYPES: VehicleType[] = ['Sedan', 'SUV', 'Hatchback', 'Innova', 'Tempo Traveller'];
 export const PRIORITIES: Priority[] = ['Low', 'Medium', 'High', 'Hot'];
 export const CAB_REQUIREMENTS = ['Airport Transfer', 'Outstation Cab', 'Hourly Rental', 'Corporate Travel', 'Wedding Car', 'City Taxi'];
-export const TASK_STATUSES: TaskStatus[] = ['Todo', 'In Progress', 'Review', 'Done'];
+export const TASK_STATUSES: TaskStatus[] = ['Pending', 'In Progress', 'Completed'];
 export const TASK_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
+export const API_LEAD_SOURCES = [
+  'Website',
+  'Facebook',
+  'Instagram',
+  'Google Ads',
+  'Referral',
+  'Walk-in',
+  'Inbound Call',
+  'Outbound Call',
+] as const;
 export const LEAD_SOURCES = [
   'Website',
   'Facebook',

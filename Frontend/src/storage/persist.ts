@@ -30,7 +30,7 @@ export async function saveApiBase(value: string): Promise<void> {
 }
 
 interface StoredSession {
-  token: string;
+  csrfToken: string;
   user: SessionUser;
 }
 
@@ -38,15 +38,22 @@ export async function loadSession(): Promise<StoredSession | null> {
   try {
     const raw = Platform.OS === 'web' ? await AsyncStorage.getItem(SESSION_KEY) : await SecureStore.getItemAsync(SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as StoredSession;
+    return parseSession(raw);
   } catch {
     const raw = await AsyncStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    try {
-      return JSON.parse(raw) as StoredSession;
-    } catch {
-      return null;
-    }
+    return parseSession(raw);
+  }
+}
+
+function parseSession(raw: string): StoredSession | null {
+  try {
+    const row = JSON.parse(raw) as { csrfToken?: unknown; token?: unknown; user?: SessionUser };
+    const csrfToken = typeof row.csrfToken === 'string' ? row.csrfToken : typeof row.token === 'string' ? row.token : '';
+    if (!row.user || !csrfToken) return null;
+    return { csrfToken, user: row.user };
+  } catch {
+    return null;
   }
 }
 

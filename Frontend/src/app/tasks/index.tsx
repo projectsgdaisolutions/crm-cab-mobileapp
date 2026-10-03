@@ -15,7 +15,7 @@ export default function TasksScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('Medium');
-  const [status, setStatus] = useState<TaskStatus>('Todo');
+  const [status, setStatus] = useState<TaskStatus>('Pending');
   const [dueDate, setDueDate] = useState(ymd(new Date()));
   const [assignedTo, setAssignedTo] = useState(session?.name ?? '');
   const [relatedTo, setRelatedTo] = useState('');
@@ -33,7 +33,7 @@ export default function TasksScreen() {
     setTitle('');
     setDescription('');
     setPriority('Medium');
-    setStatus('Todo');
+    setStatus('Pending');
     setDueDate(ymd(new Date()));
     setAssignedTo(session?.name ?? names[0] ?? '');
     setRelatedTo('');
@@ -74,8 +74,8 @@ export default function TasksScreen() {
             </Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
               <Pressable onPress={() => startEdit(task)} style={chip}><Text style={chipText}>Edit</Text></Pressable>
-              {task.status !== 'Done' ? (
-                <Pressable onPress={() => void saveTask({ ...task, status: 'Done' }, false)} style={chip}>
+              {task.status !== 'Completed' ? (
+                <Pressable onPress={() => void saveTask({ ...task, status: 'Completed' }, false)} style={chip}>
                   <Text style={chipText}>Mark complete</Text>
                 </Pressable>
               ) : null}
@@ -112,6 +112,7 @@ export default function TasksScreen() {
                   status,
                   dueDate,
                   assignedTo: assignedTo || session?.name || 'Unassigned',
+                  assignedToId: data.executives.find((person) => person.name === assignedTo)?.id ?? session?.id,
                   relatedTo: relatedTo.trim() || undefined,
                   syncState: 'local',
                 };

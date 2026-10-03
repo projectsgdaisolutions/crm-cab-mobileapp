@@ -378,6 +378,19 @@ export function toApiUser(executive: Executive, creating: boolean): Record<strin
   return body;
 }
 
+function fromApiTaskStatus(value: unknown): TaskItem['status'] {
+  const status = String(value ?? '');
+  if (status === 'Completed' || status === 'Done') return 'Completed';
+  if (status === 'In Progress' || status === 'Review') return 'In Progress';
+  return 'Pending';
+}
+
+function toApiTaskStatus(status: TaskItem['status']): 'Pending' | 'In Progress' | 'Completed' {
+  if (status === 'Completed') return 'Completed';
+  if (status === 'In Progress') return 'In Progress';
+  return 'Pending';
+}
+
 export function fromApiTask(raw: Record<string, unknown>): TaskItem {
   const due = splitDateTime(raw.dueDate == null ? undefined : String(raw.dueDate));
   return {
@@ -385,7 +398,7 @@ export function fromApiTask(raw: Record<string, unknown>): TaskItem {
     title: String(raw.title ?? ''),
     description: String(raw.description ?? ''),
     priority: (raw.priority as TaskItem['priority']) ?? 'Medium',
-    status: (raw.status as TaskItem['status']) ?? 'Todo',
+    status: fromApiTaskStatus(raw.status),
     dueDate: due.date || String(raw.dueDate ?? ''),
     assignedTo: String(raw.assignedToName ?? ''),
     assignedToId: raw.assignedToId == null ? undefined : String(raw.assignedToId),
@@ -405,7 +418,7 @@ export function toApiTask(task: TaskItem, context: MapperContext): Record<string
     assignedToId,
     dueDate: task.dueDate ? joinDateTime(task.dueDate, '10:00') : undefined,
     priority: task.priority,
-    status: task.status,
+    status: toApiTaskStatus(task.status),
     ...related,
   };
 }

@@ -12,7 +12,7 @@ import { colors, fonts } from '../../theme';
 const sample = require('../../../assets/sample-call.wav');
 
 export default function RecordingsScreen() {
-  const { data, attachRecording } = useStore();
+  const { data, attachRecording, playRecording } = useStore();
   const playerRef = useRef<AudioPlayer | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [found, setFound] = useState(0);
@@ -39,7 +39,7 @@ export default function RecordingsScreen() {
       <Card style={{ margin: 20 }}>
         <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>Device limits</Text>
         <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 6, lineHeight: 20 }}>
-          Automatic sync depends on the Android version, the dialer, and whether a recording file is readable. Missed calls often have no file. This app does not record the call itself. It opens the native dialer, then uploads a file the phone already saved, or a file you pick.
+          Automatic sync depends on the Android version, the dialer, and whether a recording file is readable. Missed calls often have no file. This app does not record the call itself. The CRM API lists recordings for admins only and has no upload route, so files you pick stay on this phone.
         </Text>
         <Text style={{ fontFamily: fonts.medium, color: colors.forest, marginTop: 8 }}>
           {found > 0 ? `${found} audio files found in common recording folders.` : 'No recording folder was readable in this runtime. Use upload for a file you can access.'}
@@ -49,7 +49,7 @@ export default function RecordingsScreen() {
       <View style={{ paddingHorizontal: 20, gap: 10 }}>
         {data.recordings.length === 0 ? <EmptyState title="No recordings yet" body="After a call, attach a file from the outcome sheet or upload one here." /> : null}
         {data.recordings.map((item) => {
-          const canPlay = Boolean(item.uri || item.remoteUrl || item.previewClip);
+          const canPlay = Boolean(item.uri || item.remoteUrl || item.previewClip || item.id);
           return (
             <Card key={item.id}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
@@ -67,9 +67,13 @@ export default function RecordingsScreen() {
                 <Pressable
                   disabled={!canPlay}
                   onPress={() => {
-                    if (item.uri) play(item.id, item.uri);
-                    else if (item.remoteUrl) play(item.id, item.remoteUrl);
-                    else if (item.previewClip) play(item.id, sample);
+                    if (item.previewClip && !item.uri && !item.remoteUrl) {
+                      play(item.id, sample);
+                      return;
+                    }
+                    void playRecording(item)
+                      .then((source) => play(item.id, source))
+                      .catch((error) => setMessage(error instanceof Error ? error.message : 'Playback failed.'));
                   }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, opacity: canPlay ? 1 : 0.4 }}
                 >
