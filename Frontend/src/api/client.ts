@@ -140,6 +140,17 @@ export const api = {
     request<Recording>(base, '/api/mobile/recordings/upload', { method: 'POST', token, form }),
 };
 
+function asList<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') {
+    const row = value as Record<string, unknown>;
+    for (const key of ['data', 'items', 'results', 'records', 'followUps', 'customers', 'leads', 'notes', 'bookings', 'calls', 'recordings']) {
+      if (Array.isArray(row[key])) return row[key] as T[];
+    }
+  }
+  return [];
+}
+
 export async function pullDesk(base: string, token: string): Promise<Partial<AppData>> {
   const [customers, leads, followUps, notes, bookings, calls, recordings] = await Promise.all([
     api.listCustomers(base, token),
@@ -150,5 +161,13 @@ export async function pullDesk(base: string, token: string): Promise<Partial<App
     api.listCalls(base, token),
     api.listRecordings(base, token),
   ]);
-  return { customers, leads, followUps, notes, bookings, calls, recordings };
+  return {
+    customers: asList(customers),
+    leads: asList(leads),
+    followUps: asList(followUps),
+    notes: asList(notes),
+    bookings: asList(bookings),
+    calls: asList(calls),
+    recordings: asList(recordings),
+  };
 }

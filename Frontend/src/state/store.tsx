@@ -101,14 +101,29 @@ function withSync<T extends { syncState: SyncState }>(row: T, state: SyncState):
   return { ...row, syncState: state };
 }
 
+function asDeskList<T>(value: unknown, fallback: T[]): T[] {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') {
+    const data = (value as { data?: unknown }).data;
+    if (Array.isArray(data)) return data as T[];
+  }
+  return fallback;
+}
+
 function completeDesk(stored: AppData | null): AppData {
   const seed = createSeed();
   if (!stored) return seed;
   return {
-    ...seed,
-    ...stored,
-    executives: stored.executives ?? seed.executives,
-    tasks: stored.tasks ?? seed.tasks,
+    customers: asDeskList(stored.customers, seed.customers),
+    leads: asDeskList(stored.leads, seed.leads),
+    notes: asDeskList(stored.notes, seed.notes),
+    followUps: asDeskList(stored.followUps, seed.followUps),
+    bookings: asDeskList(stored.bookings, seed.bookings),
+    calls: asDeskList(stored.calls, seed.calls),
+    recordings: asDeskList(stored.recordings, seed.recordings),
+    activities: asDeskList(stored.activities, seed.activities),
+    executives: asDeskList(stored.executives, seed.executives),
+    tasks: asDeskList(stored.tasks, seed.tasks),
   };
 }
 
@@ -140,9 +155,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   apiRef.current = apiBase;
 
   const commit = useCallback((next: AppData) => {
-    dataRef.current = next;
-    setData(next);
-    void saveDesk(next);
+    const desk = completeDesk(next);
+    dataRef.current = desk;
+    setData(desk);
+    void saveDesk(desk);
   }, []);
 
   const patch = useCallback(
@@ -174,9 +190,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setApiBaseState(base);
       apiRef.current = base;
       if (storedDesk) {
-        const desk = completeDesk(storedDesk);
-        setData(desk);
-        dataRef.current = desk;
+        commit(completeDesk(storedDesk));
       }
       if (storedSession) {
         setSession(storedSession.user);
