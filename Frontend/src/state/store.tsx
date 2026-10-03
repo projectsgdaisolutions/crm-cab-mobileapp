@@ -3,6 +3,7 @@ import { AppState, Platform } from 'react-native';
 import { ApiError, api, pullDesk } from '../api/client';
 import { createSeed, demoUser, demoUserFor, isDemoLogin } from '../data/seed';
 import { makeId } from '../lib/ids';
+import { nextFollowUpForLead } from '../lib/scheduleSync';
 import type { DeviceCall } from '../lib/syncCalls';
 import { loadApiBase, loadDesk, loadSession, saveApiBase, saveDesk, saveSession } from '../storage/persist';
 import type {
@@ -558,8 +559,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (row.status === 'Completed' && !row.completedAt) row = { ...row, completedAt: new Date().toISOString() };
     patch((current) => {
       const followUps = creating ? [row, ...current.followUps] : current.followUps.map((item) => (item.id === row.id ? row : item));
+      const leads = nextFollowUpForLead(current.leads, { ...row, creating }, new Date().toISOString());
       return addActivity(
-        { ...current, followUps },
+        { ...current, followUps, leads },
         {
           entityType: row.entityType,
           entityId: row.entityId,

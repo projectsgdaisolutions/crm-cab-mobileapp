@@ -11,6 +11,7 @@ export default function MoreScreen() {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 28 }}>
       <PageHeader title="More" subtitle="Follow-ups, bookings, recordings" />
       <ViewSpacer />
+      <RowLink icon="notifications-outline" title="Notifications" detail="Follow-ups, leads, bookings, missed calls" onPress={() => router.push('/notifications')} />
       <RowLink icon="alarm-outline" title="Follow-ups" detail={`${pending} still open`} onPress={() => router.push('/follow-ups')} />
       <RowLink icon="car-outline" title="Bookings" detail={`${data.bookings.length} on this desk`} onPress={() => router.push('/bookings')} />
       <RowLink icon="document-text-outline" title="Notes" detail={`${data.notes.length} remarks`} onPress={() => router.push('/notes')} />

@@ -7,12 +7,14 @@ import { Notice } from '../../components/ui';
 import { formatWhen, greeting, ymd } from '../../lib/dates';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
+import { useNotifications } from '../../state/useNotifications';
 import { colors, fonts } from '../../theme';
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, data, notice, clearNotice, refresh } = useStore();
+  const { unreadCount } = useNotifications();
   const today = ymd(new Date());
   const pending = data.followUps.filter((item) => item.status === 'Pending' || item.status === 'Rescheduled');
   const missed = data.calls.filter((call) => call.status === 'Missed');
@@ -47,6 +49,14 @@ export default function DashboardScreen() {
             <Text style={styles.hello}>{greeting()}, {first}</Text>
             <Text style={styles.date}>{dateLine}</Text>
           </View>
+          <Pressable accessibilityLabel="Notifications" onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.profile, pressed && styles.dim]}>
+            <Ionicons name="notifications-outline" size={18} color={colors.ink} />
+            {unreadCount > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
           <Pressable accessibilityLabel="Profile" onPress={() => router.push('/profile')} style={({ pressed }) => [styles.profile, pressed && styles.dim]}>
             <Ionicons name="person-outline" size={18} color={colors.ink} />
           </Pressable>
@@ -152,6 +162,8 @@ const styles = StyleSheet.create({
   hello: { color: colors.ink, fontFamily: fonts.display, fontSize: 28 },
   date: { color: colors.muted, fontFamily: fonts.medium, marginTop: 4, fontSize: 14 },
   profile: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.clay, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  badgeText: { color: colors.white, fontFamily: fonts.bold, fontSize: 9 },
   pair: { flexDirection: 'row', gap: 12, marginTop: 18 },
   outline: { flex: 1, height: 48, borderRadius: 16, borderWidth: 1, borderColor: '#E3E6F0', backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   outlineText: { color: colors.saffron, fontFamily: fonts.bold, fontSize: 15 },

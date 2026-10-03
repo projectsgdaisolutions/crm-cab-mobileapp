@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { buildNotifications } from './notifications';
 import { formatPhone, normalizePhone, phonesMatch, telUri } from './phone';
+import { channelForFollowType, nextFollowUpForLead, syncPartyId } from './scheduleSync';
 import { matchDeviceCalls, type DeviceCall } from './syncCalls';
-import type { CallRecord, Customer, Lead } from '../types';
+import type { AppData, CallRecord, Customer, Lead } from '../types';
 
 function check(name: string, fn: () => void) {
   try {
@@ -107,6 +109,74 @@ check('links device calls and skips duplicates', () => {
   assert.equal(matched[1].entityType, 'lead');
   assert.equal(matched[1].entityName, 'Kabir Joshi');
   assert.equal(matched[2].entityId, undefined);
+});
+
+check('syncs the person when the follow-up type changes', () => {
+  const parties = [
+    { type: 'customer' as const, id: 'C-1', name: 'Ananya', mobile: '1' },
+    { type: 'lead' as const, id: 'L-1', name: 'Kabir', mobile: '2' },
+  ];
+  assert.equal(syncPartyId('Lead', parties, 'C-1'), 'L-1');
+  assert.equal(syncPartyId('Customer', parties, 'L-1'), 'C-1');
+  assert.equal(syncPartyId('Lead', parties, 'L-1'), 'L-1');
+  assert.equal(channelForFollowType('Call'), 'Phone');
+  assert.equal(channelForFollowType('Message'), 'WhatsApp');
+  assert.equal(channelForFollowType('Visit'), 'Visit');
+});
+
+check('copies a new schedule onto the lead follow-up fields', () => {
+  const leads = [{ id: 'L-1', nextFollowUpDate: '2026-10-01', nextFollowUpTime: '09:00', updatedAt: 'old' }];
+  const next = nextFollowUpForLead(
+    leads,
+    { creating: true, entityType: 'lead', entityId: 'L-1', status: 'Pending', date: '2026-10-04', time: '15:30' },
+    'new',
+  );
+  assert.equal(next[0].nextFollowUpDate, '2026-10-04');
+  assert.equal(next[0].nextFollowUpTime, '15:30');
+  const skipped = nextFollowUpForLead(
+    leads,
+    { creating: true, entityType: 'customer', entityId: 'C-1', status: 'Pending', date: '2026-10-04', time: '15:30' },
+    'new',
+  );
+  assert.equal(skipped[0].nextFollowUpDate, '2026-10-01');
+});
+
+check('builds local notifications and skips the report feed', () => {
+  const now = new Date('2026-10-03T12:00:00');
+  const data = {
+    customers: [],
+    leads: [{ ...lead, createdAt: '2026-10-03T08:00:00.000Z' }],
+    notes: [],
+    followUps: [
+      {
+        id: 'F-1',
+        entityType: 'lead' as const,
+        entityId: 'L-1',
+        entityName: 'Kabir Joshi',
+        mobile: '9988776655',
+        date: '2026-10-03',
+        time: '09:00',
+        type: 'Call' as const,
+        channel: 'Phone' as const,
+        remarks: 'Confirm pickup',
+        status: 'Pending' as const,
+        createdBy: 'Priya',
+        syncState: 'local' as const,
+      },
+    ],
+    bookings: [],
+    calls: [],
+    recordings: [],
+    activities: [],
+    executives: [],
+    tasks: [],
+  } satisfies AppData;
+  const items = buildNotifications(data, { reminders: true, leadAlerts: true, bookingAlerts: false }, now);
+  assert.equal(items.some((item) => item.id === 'followup:F-1'), true);
+  assert.equal(items.some((item) => item.id === 'lead:L-1'), true);
+  assert.equal(items.some((item) => item.title.toLowerCase().includes('report')), false);
+  const quiet = buildNotifications(data, { reminders: false, leadAlerts: false, bookingAlerts: false }, now);
+  assert.equal(quiet.length, 0);
 });
 
 console.log('all checks passed');
