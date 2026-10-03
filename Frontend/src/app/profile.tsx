@@ -10,10 +10,8 @@ const PREFS_KEY = 'cabcrm.prefs.v1';
 const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'America/New_York', 'Europe/London'];
 
 export default function ProfileScreen() {
-  const { session, apiBase, setApiBase, logout, restoreSample, mode } = useStore();
+  const { session, logout, restoreSample, mode } = useStore();
   const router = useRouter();
-  const [url, setUrl] = useState(apiBase);
-  const [saved, setSaved] = useState('');
   const [company, setCompany] = useState('VehicoCRM');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
   const [bio, setBio] = useState('');
@@ -49,16 +47,6 @@ export default function ProfileScreen() {
           <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{session?.mobile}</Text>
           <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Signed in on this phone'}</Text>
         </Card>
-        <Field label="CRM API address" value={url} onChangeText={setUrl} placeholder="https://api.example.com" keyboardType="default" />
-        {saved ? <Text style={{ fontFamily: fonts.medium, color: colors.forest }}>{saved}</Text> : null}
-        <Button
-          label="Save API address"
-          tone="forest"
-          onPress={async () => {
-            await setApiBase(url);
-            setSaved('Saved. Sign in again to use a live token.');
-          }}
-        />
         {session?.role === 'admin' ? (
           <Card>
             <Text style={{ fontFamily: fonts.display, fontSize: 22, color: colors.ink }}>Team & Users</Text>
@@ -88,7 +76,6 @@ export default function ProfileScreen() {
             tone="forest"
             onPress={async () => {
               await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({ company, timezone, bio, reminders, leadAlerts, bookingAlerts }));
-              setSaved('Preferences saved on this phone.');
             }}
           />
         </Card>

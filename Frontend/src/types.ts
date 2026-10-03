@@ -18,7 +18,7 @@ export type CallDirection = 'incoming' | 'outgoing';
 export type CallStatus = 'Answered' | 'Missed' | 'Busy' | 'Rejected' | 'Failed';
 export type BookingStatus = 'Enquiry' | 'Confirmed' | 'Assigned' | 'Completed' | 'Cancelled';
 export type PaymentStatus = 'Unpaid' | 'Partial' | 'Paid' | 'Refunded';
-export type VehicleType = 'Sedan' | 'SUV' | 'Hatchback' | 'Innova' | 'Tempo Traveller';
+export type VehicleType = 'Sedan' | 'SUV' | 'Hatchback' | 'Innova' | 'Tempo Traveller' | 'Luxury';
 export type Priority = 'Low' | 'Medium' | 'High' | 'Hot';
 export type TaskStatus = 'Todo' | 'In Progress' | 'Review' | 'Done';
 export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
@@ -240,7 +240,7 @@ export const FOLLOW_UP_PRIORITIES: FollowUpPriority[] = ['Low', 'Medium', 'High'
 export const CALL_STATUSES: CallStatus[] = ['Answered', 'Missed', 'Busy', 'Rejected', 'Failed'];
 export const BOOKING_STATUSES: BookingStatus[] = ['Enquiry', 'Confirmed', 'Assigned', 'Completed', 'Cancelled'];
 export const PAYMENT_STATUSES: PaymentStatus[] = ['Unpaid', 'Partial', 'Paid', 'Refunded'];
-export const VEHICLE_TYPES: VehicleType[] = ['Sedan', 'SUV', 'Hatchback', 'Innova', 'Tempo Traveller'];
+export const VEHICLE_TYPES: VehicleType[] = ['Sedan', 'SUV', 'Hatchback', 'Innova', 'Tempo Traveller', 'Luxury'];
 export const PRIORITIES: Priority[] = ['Low', 'Medium', 'High', 'Hot'];
 export const CAB_REQUIREMENTS = ['Airport Transfer', 'Outstation Cab', 'Hourly Rental', 'Corporate Travel', 'Wedding Car', 'City Taxi'];
 export const TASK_STATUSES: TaskStatus[] = ['Todo', 'In Progress', 'Review', 'Done'];
@@ -250,12 +250,8 @@ export const LEAD_SOURCES = [
   'Facebook',
   'Instagram',
   'Google Ads',
-  'Referral',
   'Walk-in',
   'Inbound Call',
   'Outbound Call',
-  'Justdial',
   'Google',
-  'Reference',
-  'Repeat customer',
 ];
