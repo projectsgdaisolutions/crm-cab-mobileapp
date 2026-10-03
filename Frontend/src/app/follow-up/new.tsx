@@ -1,83 +1,157 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Button, ChoiceRow, Field, PageHeader, Screen, SelectField } from '../../components/ui';
 import { ymd } from '../../lib/dates';
 import { makeId } from '../../lib/ids';
+import {
+  channelForFollowType,
+  isFollowChannel,
+  isFollowPriority,
+  isFollowType,
+  kindForParty,
+  partiesForKind,
+  partyLabel,
+  syncPartyId,
+  type PartyKind,
+  type ScheduleParty,
+} from '../../lib/scheduleSync';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
-import { FOLLOW_UP_CHANNELS, FOLLOW_UP_PRIORITIES, FOLLOW_UP_TYPES, type EntityType, type FollowUp, type FollowUpChannel, type FollowUpPriority, type FollowUpType } from '../../types';
+import {
+  FOLLOW_UP_CHANNELS,
+  FOLLOW_UP_PRIORITIES,
+  FOLLOW_UP_TYPES,
+  type EntityType,
+  type FollowUp,
+  type FollowUpChannel,
+  type FollowUpPriority,
+  type FollowUpType,
+} from '../../types';
 
 export default function FollowUpFormScreen() {
-  const params = useLocalSearchParams<{ entityType?: string; entityId?: string; name?: string; mobile?: string }>();
+  const params = useLocalSearchParams<{
+    entityType?: string;
+    entityId?: string;
+    followType?: string;
+    channel?: string;
+    priority?: string;
+    assignedTo?: string;
+    date?: string;
+    time?: string;
+    remarks?: string;
+    sourceId?: string;
+  }>();
   const { data, saveFollowUp, session } = useStore();
   const router = useRouter();
+  const appliedRoute = useRef(false);
 
-  const customers = data.customers.map((item) => ({ type: 'customer' as const, id: item.id, name: item.name, mobile: item.mobile }));
-  const leads = data.leads.map((item) => ({ type: 'lead' as const, id: item.id, name: item.name, mobile: item.mobile }));
-  const parties = [...customers, ...leads];
+  const parties = useMemo<ScheduleParty[]>(
+    () => [
+      ...data.customers.map((item) => ({ type: 'customer' as const, id: item.id, name: item.name, mobile: item.mobile })),
+      ...data.leads.map((item) => ({ type: 'lead' as const, id: item.id, name: item.name, mobile: item.mobile })),
+    ],
+    [data.customers, data.leads],
+  );
 
-  const initial = parties.find((item) => item.id === params.entityId) ?? parties[0];
-  const [entityKind, setEntityKind] = useState<'Customer' | 'Lead'>(initial?.type === 'lead' ? 'Lead' : 'Customer');
-  const [partyId, setPartyId] = useState(initial?.id ?? '');
+  const [entityKind, setEntityKind] = useState<PartyKind>('Customer');
+  const [partyId, setPartyId] = useState('');
   const [date, setDate] = useState(ymd(new Date()));
   const [time, setTime] = useState('11:00');
   const [type, setType] = useState<FollowUpType>('Call');
   const [channel, setChannel] = useState<FollowUpChannel>('Phone');
   const [priority, setPriority] = useState<FollowUpPriority>('Medium');
   const [assignedTo, setAssignedTo] = useState(session?.name ?? '');
+  const assignedTouched = useRef(false);
   const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
 
-  const visibleParties = entityKind === 'Lead' ? leads : customers;
-  const partyOptions = visibleParties.map((item) => item.name);
-  const selectedPartyName = visibleParties.find((item) => item.id === partyId)?.name ?? partyOptions[0] ?? '';
-  const party = parties.find((item) => item.id === partyId);
+  useEffect(() => {
+    if (appliedRoute.current) return;
+    const requestedId = typeof params.entityId === 'string' ? params.entityId : '';
+    if (requestedId && !parties.some((item) => item.id === requestedId)) return;
+
+    const requested = parties.find((item) => item.id === requestedId);
+    const kind: PartyKind = requested
+      ? kindForParty(requested.type)
+      : params.entityType === 'lead'
+        ? 'Lead'
+        : 'Customer';
+    setEntityKind(kind);
+    setPartyId(syncPartyId(kind, parties, requested?.id ?? ''));
+
+    if (isFollowType(params.followType)) {
+      setType(params.followType);
+      setChannel(isFollowChannel(params.channel) ? params.channel : channelForFollowType(params.followType));
+    } else if (isFollowChannel(params.channel)) {
+      setChannel(params.channel);
+    }
+    if (isFollowPriority(params.priority)) setPriority(params.priority);
+    if (typeof params.assignedTo === 'string' && params.assignedTo) {
+      assignedTouched.current = true;
+      setAssignedTo(params.assignedTo);
+    }
+    if (typeof params.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(params.date)) setDate(params.date);
+    if (typeof params.time === 'string' && /^\d{2}:\d{2}$/.test(params.time)) setTime(params.time);
+    if (typeof params.remarks === 'string' && params.remarks) setRemarks(params.remarks);
+    appliedRoute.current = true;
+  }, [params, parties]);
+
+  useEffect(() => {
+    if (assignedTouched.current || assignedTo || !session?.name) return;
+    setAssignedTo(session.name);
+  }, [assignedTo, session?.name]);
+
+  const visibleParties = partiesForKind(entityKind, parties);
+  const party = visibleParties.find((item) => item.id === partyId) ?? null;
+  const partyOptions = visibleParties.map(partyLabel);
+  const selectedLabel = party ? partyLabel(party) : '';
+
+  function changeKind(kind: PartyKind) {
+    setEntityKind(kind);
+    setPartyId(syncPartyId(kind, parties, ''));
+  }
+
+  function changeType(next: FollowUpType) {
+    setType(next);
+    setChannel(channelForFollowType(next));
+  }
 
   return (
     <Screen>
       <PageHeader title="Schedule Follow-up" subtitle="New schedule" back />
       <View style={{ padding: 20 }}>
-        {/* Customer / Lead * toggle */}
-        <ChoiceRow
-          label="Customer / Lead *"
-          options={['Customer', 'Lead']}
-          value={entityKind}
-          onChange={(kind) => {
-            setEntityKind(kind);
-            const next = kind === 'Lead' ? leads[0] : customers[0];
-            if (next) setPartyId(next.id);
-          }}
-        />
+        <ChoiceRow label="Customer / Lead *" options={['Customer', 'Lead']} value={entityKind} onChange={changeKind} />
 
-        {/* Select lead / customer dropdown */}
         <SelectField
           label={entityKind === 'Lead' ? 'Select Lead *' : 'Select Customer *'}
           options={partyOptions.length ? partyOptions : ['No options available']}
-          value={selectedPartyName}
-          onChange={(name) => {
-            const match = visibleParties.find((item) => item.name === name);
+          value={selectedLabel}
+          onChange={(label) => {
+            const match = visibleParties.find((item) => partyLabel(item) === label);
             if (match) setPartyId(match.id);
           }}
         />
 
-        {/* Type */}
-        <ChoiceRow label="Type" options={FOLLOW_UP_TYPES} value={type} onChange={setType} />
+        <ChoiceRow label="Type" options={FOLLOW_UP_TYPES} value={type} onChange={changeType} />
 
-        {/* Channel */}
         <ChoiceRow label="Channel" options={FOLLOW_UP_CHANNELS} value={channel} onChange={setChannel} />
 
-        {/* Scheduled at */}
         <Field label="Scheduled at *" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
         <Field label="Time *" value={time} onChangeText={setTime} placeholder="HH:MM" />
 
-        {/* Priority */}
         <ChoiceRow label="Priority" options={FOLLOW_UP_PRIORITIES} value={priority} onChange={setPriority} />
 
-        {/* Assigned to */}
-        <Field label="Assigned to" value={assignedTo} onChangeText={setAssignedTo} placeholder={session?.name ?? 'Calling executive'} />
+        <Field
+          label="Assigned to"
+          value={assignedTo}
+          onChangeText={(value) => {
+            assignedTouched.current = true;
+            setAssignedTo(value);
+          }}
+          placeholder={session?.name ?? 'Calling executive'}
+        />
 
-        {/* Notes */}
         <Field
           label="Notes"
           value={remarks}
@@ -118,6 +192,13 @@ export default function FollowUpFormScreen() {
                   syncState: 'local',
                 };
                 await saveFollowUp(row, true);
+                const sourceId = typeof params.sourceId === 'string' ? params.sourceId : '';
+                if (sourceId) {
+                  const previous = data.followUps.find((item) => item.id === sourceId);
+                  if (previous && previous.status !== 'Completed' && previous.status !== 'Cancelled') {
+                    await saveFollowUp({ ...previous, status: 'Rescheduled' }, false);
+                  }
+                }
                 router.back();
               }}
             />
