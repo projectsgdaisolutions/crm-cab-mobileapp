@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,11 +21,13 @@ export function Screen({
   children,
   scroll = true,
   footer,
+  overlay,
   tint = colors.cream,
 }: {
   children: ReactNode;
   scroll?: boolean;
   footer?: ReactNode;
+  overlay?: ReactNode;
   tint?: string;
 }) {
   const insets = useSafeAreaInsets();
@@ -43,6 +46,7 @@ export function Screen({
     <View style={{ flex: 1, backgroundColor: tint }}>
       {body}
       {footer ? <View style={{ paddingBottom: Math.max(insets.bottom, 10), backgroundColor: colors.paper }}>{footer}</View> : null}
+      {overlay}
     </View>
   );
 }
@@ -331,6 +335,21 @@ export function SearchField({ value, onChangeText, placeholder }: { value: strin
 }
 
 export function FilterChips({ options, value, onChange }: { options: string[]; value: string; onChange: (value: string) => void }) {
+  const [frames, setFrames] = useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
+  const left = useRef(new Animated.Value(0)).current;
+  const pillWidth = useRef(new Animated.Value(0)).current;
+  const top = useRef(new Animated.Value(0)).current;
+  const frame = frames[value];
+
+  useEffect(() => {
+    if (!frame) return;
+    Animated.parallel([
+      Animated.spring(left, { toValue: frame.x, useNativeDriver: false, friction: 8, tension: 90 }),
+      Animated.spring(pillWidth, { toValue: frame.width, useNativeDriver: false, friction: 8, tension: 90 }),
+      Animated.spring(top, { toValue: frame.y, useNativeDriver: false, friction: 8, tension: 90 }),
+    ]).start();
+  }, [frame, left, pillWidth, top]);
+
   return (
     <View style={styles.filterBar}>
       <ScrollView
@@ -340,17 +359,42 @@ export function FilterChips({ options, value, onChange }: { options: string[]; v
         style={styles.filterScroll}
         keyboardShouldPersistTaps="handled"
       >
+        {frame ? (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left,
+              top,
+              width: pillWidth,
+              height: frame.height,
+              borderRadius: 999,
+              backgroundColor: '#D6F5E8',
+              borderWidth: 1.5,
+              borderColor: colors.moss,
+            }}
+          />
+        ) : null}
         {options.map((option) => {
           const selected = option === value;
           return (
             <Pressable
               key={option}
               onPress={() => onChange(option)}
+              onLayout={(event) => {
+                const next = event.nativeEvent.layout;
+                setFrames((current) => {
+                  const prev = current[option];
+                  if (prev && prev.x === next.x && prev.width === next.width && prev.y === next.y) return current;
+                  return { ...current, [option]: next };
+                });
+              }}
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
               style={({ pressed }) => [
                 styles.filter,
                 selected && styles.filterOn,
-                pressed && { opacity: 0.65, transform: [{ scale: 0.96 }] },
+                selected && frame ? { backgroundColor: 'transparent', borderColor: 'transparent' } : null,
+                pressed && { opacity: 0.65 },
               ]}
             >
               <Text style={[styles.filterText, selected && styles.filterTextOn]}>{option}</Text>

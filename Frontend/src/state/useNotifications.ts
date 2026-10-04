@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildNotifications, DEFAULT_NOTIFICATION_PREFS, type DeskNotification, type NotificationPrefs } from '../lib/notifications';
 import { useStore } from './store';
 
-const STORAGE_PREFS = 'cabcrm.prefs.v1';
-const STORAGE_READ = 'cabcrm.notifRead.v1';
+const PREFS_KEY = 'cabcrm.prefs.v1';
+const READ_KEY = 'cabcrm.notifRead.v1';
 
 export function useNotifications() {
   const { data } = useStore();
@@ -14,7 +14,7 @@ export function useNotifications() {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([AsyncStorage.getItem(STORAGE_PREFS), AsyncStorage.getItem(STORAGE_READ)]).then(([prefsRaw, readRaw]) => {
+    void Promise.all([AsyncStorage.getItem(PREFS_KEY), AsyncStorage.getItem(READ_KEY)]).then(([prefsRaw, readRaw]) => {
       if (cancelled) return;
       if (prefsRaw) {
         try {
@@ -49,7 +49,7 @@ export function useNotifications() {
 
   const persist = useCallback(async (next: string[]) => {
     setReadIds(next);
-    await AsyncStorage.setItem(STORAGE_READ, JSON.stringify(next));
+    await AsyncStorage.setItem(READ_KEY, JSON.stringify(next));
   }, []);
 
   const markRead = useCallback(

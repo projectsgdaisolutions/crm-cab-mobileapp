@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button, Card, ChoiceRow, EmptyState, Field, PageHeader, Pill, Screen } from '../../components/ui';
 import { ymd } from '../../lib/dates';
+import { matchesOnDate, taskStats } from '../../lib/deskFilters';
 import { makeId } from '../../lib/ids';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
@@ -10,6 +11,7 @@ import { TASK_PRIORITIES, TASK_STATUSES, type TaskItem, type TaskPriority, type 
 export default function TasksScreen() {
   const { data, saveTask, session } = useStore();
   const [query, setQuery] = useState('');
+  const [onDate, setOnDate] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskItem | null>(null);
   const [title, setTitle] = useState('');
@@ -23,10 +25,12 @@ export default function TasksScreen() {
 
   const names = Array.from(new Set([session?.name, ...data.executives.map((person) => person.name)].filter(Boolean))) as string[];
   const rows = data.tasks.filter((task) => {
+    if (!matchesOnDate(task.dueDate, onDate)) return false;
     const needle = query.trim().toLowerCase();
     if (!needle) return true;
     return `${task.title} ${task.assignedTo} ${task.relatedTo ?? ''}`.toLowerCase().includes(needle);
   });
+  const stats = taskStats(data.tasks, ymd(new Date()));
 
   function startCreate() {
     setEditing(null);
@@ -56,10 +60,11 @@ export default function TasksScreen() {
 
   return (
     <Screen>
-      <PageHeader title="Tasks" subtitle="Work sitting with the calling desk" back />
+      <PageHeader title="Tasks" subtitle={`${stats.open} open · ${stats.dueToday} due today · ${stats.overdue} overdue`} back />
       <View style={{ padding: 20, gap: 12 }}>
         <Button label="New task" onPress={startCreate} />
         <Field label="Search" value={query} onChangeText={setQuery} placeholder="Search tasks" />
+        <Field label="Due date" value={onDate} onChangeText={setOnDate} placeholder="YYYY-MM-DD, optional" />
         {rows.length === 0 ? <EmptyState title="No tasks" body="Add a task when a quotation, confirmation, or review needs a due date." /> : null}
         {rows.map((task) => (
           <Card key={task.id}>

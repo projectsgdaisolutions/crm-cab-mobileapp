@@ -8,6 +8,7 @@ import { formatWhen, greeting, ymd } from '../../lib/dates';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
 import { useNotifications } from '../../state/useNotifications';
+import { CountUp } from '../../components/Motion';
 import { colors, fonts } from '../../theme';
 
 export default function DashboardScreen() {
@@ -141,7 +142,7 @@ export default function DashboardScreen() {
 function HeroStat({ value, label }: { value: number; label: string }) {
   return (
     <View style={{ flex: 1 }}>
-      <Text style={styles.heroValue}>{value}</Text>
+      <CountUp value={value} style={styles.heroValue} />
       <Text style={styles.heroLabel}>{label}</Text>
     </View>
   );
@@ -151,7 +152,7 @@ function Stat({ icon, tint, value, label, onPress }: { icon: keyof typeof Ionico
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.stat, pressed && styles.dim]}>
       <Ionicons name={icon} size={18} color={tint} />
-      <Text style={styles.statValue}>{value}</Text>
+      <CountUp value={value} style={styles.statValue} />
       <Text style={styles.statLabel}>{label}</Text>
     </Pressable>
   );

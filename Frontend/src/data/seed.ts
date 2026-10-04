@@ -25,13 +25,17 @@ export const adminUser: SessionUser = {
   desk: 'VehicoCRM',
 };
 
-export function demoUserFor(identifier: string, password: string): SessionUser | null {
-  if (password !== DEMO_PASSWORD) return null;
+export function findDemoUser(identifier: string): SessionUser | null {
   const id = identifier.trim().toLowerCase();
   const digits = identifier.replace(/\D/g, '');
   if (id === ADMIN_EMAIL || digits.endsWith(ADMIN_MOBILE)) return adminUser;
   if (id === DEMO_EMAIL || digits.endsWith(DEMO_MOBILE)) return demoUser;
   return null;
+}
+
+export function demoUserFor(identifier: string, password: string): SessionUser | null {
+  if (password !== DEMO_PASSWORD) return null;
+  return findDemoUser(identifier);
 }
 
 export function isDemoLogin(identifier: string, password: string): boolean {
@@ -715,6 +719,44 @@ export function createSeed(now = new Date()): AppData {
         assignedTo: 'Sneha Reddy',
         relatedTo: 'Leads',
         syncState: 'local',
+      },
+    ],
+    drivers: [
+      {
+        id: 'D-12',
+        name: 'Rafiq Khan',
+        mobile: '+91 98220 11001',
+        license: 'MH01 2024 1188',
+        city: 'Mumbai',
+        status: 'Active',
+        syncState: 'synced',
+      },
+      {
+        id: 'D-18',
+        name: 'Suresh',
+        mobile: '+91 98111 44002',
+        license: 'MH02 2023 7741',
+        city: 'Mumbai',
+        status: 'Active',
+        syncState: 'synced',
+      },
+    ],
+    vehicles: [
+      {
+        id: 'V-21',
+        number: 'MH01 AB 2210',
+        type: 'Sedan',
+        model: 'Swift Dzire',
+        status: 'Active',
+        syncState: 'synced',
+      },
+      {
+        id: 'V-24',
+        number: 'MH02 CD 4481',
+        type: 'Innova',
+        model: 'Innova Crysta',
+        status: 'Active',
+        syncState: 'synced',
       },
     ],
   };
