@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pulse } from './Motion';
 import { openNativeDialer } from '../native/dialer';
 import { useStore, type CallTarget } from '../state/store';
 import { colors, fonts } from '../theme';
@@ -17,7 +18,9 @@ export function CallButton({ target, compact = false }: { target: CallTarget; co
       }}
       style={({ pressed }) => [styles.btn, compact && styles.compact, pressed && styles.pressed]}
     >
-      <Ionicons name="call" size={compact ? 20 : 18} color={compact ? colors.phone : colors.white} />
+      <Pulse>
+        <Ionicons name="call" size={compact ? 20 : 18} color={compact ? colors.phone : colors.white} />
+      </Pulse>
       {compact ? null : <Text style={styles.label}>Call</Text>}
     </Pressable>
   );

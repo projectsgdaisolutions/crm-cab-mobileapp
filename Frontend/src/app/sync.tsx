@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { SyncGlyph, Toast } from '../components/Motion';
 import { Button, Card, PageHeader, Pill, Screen } from '../components/ui';
 import { formatDuration, formatWhen } from '../lib/dates';
 import { formatPhone } from '../lib/phone';
@@ -25,6 +26,9 @@ export default function SyncScreen() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [createUnknown, setCreateUnknown] = useState(true);
   const [result, setResult] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [synced, setSynced] = useState(false);
+  const [toast, setToast] = useState('');
 
   async function load(kind: 'device' | 'preview') {
     let calls: DeviceCall[] = [];
@@ -56,7 +60,7 @@ export default function SyncScreen() {
   }
 
   return (
-    <Screen>
+    <Screen overlay={toast ? <Toast message={toast} onDone={() => setToast('')} /> : null}>
       <PageHeader title="Call log sync" subtitle="Match handset calls to the desk" back />
       <View style={{ padding: 20, gap: 12 }}>
         <Card>
@@ -96,14 +100,25 @@ export default function SyncScreen() {
           <Button
             label="Sync selected calls"
             onPress={async () => {
+              if (syncing) return;
               const chosen = rows.filter((row) => selected[row.key]);
+              setSynced(false);
+              setSyncing(true);
               const summary = await importDeviceCalls(chosen, createUnknown);
+              setSyncing(false);
+              setSynced(true);
               setResult(`Added ${summary.added} calls${summary.leads ? ` and ${summary.leads} leads` : ''}.`);
+              setToast(`${summary.added} calls synced`);
               setRows([]);
             }}
           />
         ) : null}
-        {result ? <Text style={{ fontFamily: fonts.semibold, color: colors.forest }}>{result}</Text> : null}
+        {syncing || synced ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <SyncGlyph spinning={syncing} done={synced} />
+            {result ? <Text style={{ fontFamily: fonts.semibold, color: colors.forest }}>{result}</Text> : null}
+          </View>
+        ) : result ? <Text style={{ fontFamily: fonts.semibold, color: colors.forest }}>{result}</Text> : null}
       </View>
     </Screen>
   );

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { matchesOnDate, taskStats } from './deskFilters';
 import { buildNotifications } from './notifications';
 import { formatPhone, normalizePhone, phonesMatch, telUri } from './phone';
 import { channelForFollowType, nextFollowUpForLead, syncPartyId } from './scheduleSync';
@@ -170,6 +171,8 @@ check('builds local notifications and skips the report feed', () => {
     activities: [],
     executives: [],
     tasks: [],
+    drivers: [],
+    vehicles: [],
   } satisfies AppData;
   const items = buildNotifications(data, { reminders: true, leadAlerts: true, bookingAlerts: false }, now);
   assert.equal(items.some((item) => item.id === 'followup:F-1'), true);
@@ -177,6 +180,23 @@ check('builds local notifications and skips the report feed', () => {
   assert.equal(items.some((item) => item.title.toLowerCase().includes('report')), false);
   const quiet = buildNotifications(data, { reminders: false, leadAlerts: false, bookingAlerts: false }, now);
   assert.equal(quiet.length, 0);
+});
+
+check('filters a desk by day and counts open tasks', () => {
+  assert.equal(matchesOnDate('2026-10-03T09:00:00.000Z', ''), true);
+  assert.equal(matchesOnDate('2026-10-03T09:00:00.000Z', '2026-10-03'), true);
+  assert.equal(matchesOnDate('2026-10-04', '2026-10-03'), false);
+  const stats = taskStats(
+    [
+      { id: 'T-1', title: 'A', description: '', priority: 'High', status: 'Todo', dueDate: '2026-10-03', assignedTo: 'Priya', syncState: 'local' },
+      { id: 'T-2', title: 'B', description: '', priority: 'Low', status: 'Done', dueDate: '2026-10-03', assignedTo: 'Priya', syncState: 'local' },
+      { id: 'T-3', title: 'C', description: '', priority: 'Medium', status: 'Review', dueDate: '2026-10-01', assignedTo: 'Priya', syncState: 'local' },
+    ],
+    '2026-10-03',
+  );
+  assert.equal(stats.open, 2);
+  assert.equal(stats.dueToday, 1);
+  assert.equal(stats.overdue, 1);
 });
 
 console.log('all checks passed');

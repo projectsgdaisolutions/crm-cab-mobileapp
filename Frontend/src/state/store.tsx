@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 import { ApiError, api, pullDesk } from '../api/client';
-import { createSeed, demoUser, demoUserFor, isDemoLogin } from '../data/seed';
+import { createSeed, demoUser, demoUserFor, findDemoUser, isDemoLogin } from '../data/seed';
+import { loadLocalPasswords } from '../lib/localAccount';
 import { makeId } from '../lib/ids';
 import { nextFollowUpForLead } from '../lib/scheduleSync';
 import type { DeviceCall } from '../lib/syncCalls';
@@ -13,6 +14,8 @@ import type {
   CallRecord,
   CallStatus,
   Customer,
+  Driver,
+  FleetVehicle,
   EntityType,
   Executive,
   FollowUp,
@@ -76,6 +79,8 @@ interface StoreValue {
   saveBooking: (input: Booking, creating: boolean) => Promise<Booking>;
   saveExecutive: (input: Executive, creating: boolean) => Promise<Executive>;
   saveTask: (input: TaskItem, creating: boolean) => Promise<TaskItem>;
+  saveDriver: (input: Driver, creating: boolean) => Promise<Driver>;
+  saveVehicle: (input: FleetVehicle, creating: boolean) => Promise<FleetVehicle>;
   importDeviceCalls: (calls: Array<DeviceCall & { entityType?: EntityType; entityId?: string; entityName?: string; duplicate: boolean }>, createUnknown: boolean) => Promise<{ added: number; leads: number }>;
   attachRecording: (input: {
     callId?: string;
@@ -110,6 +115,8 @@ function completeDesk(stored: AppData | null): AppData {
     ...stored,
     executives: stored.executives ?? seed.executives,
     tasks: stored.tasks ?? seed.tasks,
+    drivers: stored.drivers ?? seed.drivers,
+    vehicles: stored.vehicles ?? seed.vehicles,
   };
 }
 
@@ -236,19 +243,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             activities: dataRef.current.activities,
             executives: remote.executives ?? dataRef.current.executives,
             tasks: remote.tasks ?? dataRef.current.tasks,
+            drivers: remote.drivers ?? dataRef.current.drivers,
+            vehicles: remote.vehicles ?? dataRef.current.vehicles,
           });
         } catch (error) {
           setNotice(error instanceof Error ? `${error.message} Showing the desk saved on this phone.` : 'Showing the desk saved on this phone.');
         }
         return;
       } catch (error) {
-        if (!(error instanceof ApiError) || !error.network || !isDemoLogin(identifier, password)) {
+        const overrides = await loadLocalPasswords();
+        const localOk = overrides[identifier.trim().toLowerCase()] === password;
+        if (!(error instanceof ApiError) || !error.network || !(isDemoLogin(identifier, password) || localOk)) {
           throw error instanceof Error ? error : new Error('Sign in failed.');
         }
         setNotice('API is unreachable. Signed in with the account saved on this phone.');
       }
     }
-    const builtIn = demoUserFor(identifier, password);
+    const overrides = await loadLocalPasswords();
+    const overrideKey = identifier.trim().toLowerCase();
+    const localPassword = overrides[overrideKey];
+    if (localPassword) {
+      if (localPassword !== password) throw new Error('Those credentials were not accepted. Use the account from the CRM API.');
+      const localUser = findDemoUser(identifier);
+      if (localUser) {
+        setSession(localUser);
+        setToken('demo');
+        sessionRef.current = localUser;
+        tokenRef.current = 'demo';
+        await saveSession({ token: 'demo', user: localUser });
+        return;
+      }
+    }
+    const builtIn = localPassword ? null : demoUserFor(identifier, password);
     if (builtIn) {
       setSession(builtIn);
       setToken('demo');
@@ -730,6 +756,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { added, leads };
   }, [addActivity, patch]);
 
+  const saveDriver = useCallback(async (input: Driver, creating: boolean) => {
+    const row = { ...input, syncState: 'local' as SyncState };
+    patch((current) => {
+      const drivers = creating ? [row, ...current.drivers] : current.drivers.map((item) => (item.id === row.id ? row : item));
+      return addActivity(
+        { ...current, drivers },
+        {
+          entityType: 'customer',
+          entityId: row.id,
+          type: creating ? 'Driver added' : 'Driver updated',
+          at: new Date().toISOString(),
+          remarks: `${row.name} · ${row.status} · ${row.city}`,
+        },
+      );
+    });
+    return row;
+  }, [addActivity, patch]);
+
+  const saveVehicle = useCallback(async (input: FleetVehicle, creating: boolean) => {
+    const row = { ...input, syncState: 'local' as SyncState };
+    patch((current) => {
+      const vehicles = creating ? [row, ...current.vehicles] : current.vehicles.map((item) => (item.id === row.id ? row : item));
+      return addActivity(
+        { ...current, vehicles },
+        {
+          entityType: 'customer',
+          entityId: row.id,
+          type: creating ? 'Vehicle added' : 'Vehicle updated',
+          at: new Date().toISOString(),
+          remarks: `${row.number} · ${row.type} · ${row.status}`,
+        },
+      );
+    });
+    return row;
+  }, [addActivity, patch]);
+
   const attachRecording = useCallback(async (input: {
     callId?: string;
     entityType?: EntityType;
@@ -819,13 +881,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     saveBooking,
     saveExecutive,
     saveTask,
+    saveDriver,
+    saveVehicle,
     importDeviceCalls,
     attachRecording,
   }), [
     ready, session, token, data, apiBase, mode, notice, pendingCall, awaitingReturn,
     login, forgotPassword, logout, setApiBase, refresh, restoreSample, beginCall,
     openDisposition, dismissDisposition, saveDisposition, saveCustomer, saveLead,
-    addNote, saveFollowUp, saveBooking, saveExecutive, saveTask, importDeviceCalls, attachRecording,
+    addNote, saveFollowUp, saveBooking, saveExecutive, saveTask, saveDriver, saveVehicle, importDeviceCalls, attachRecording,
   ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

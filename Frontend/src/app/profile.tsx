@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { RiseIn } from '../components/Motion';
 import { Button, Card, ChoiceRow, Field, PageHeader, RowLink, Screen } from '../components/ui';
 import { useStore } from '../state/store';
 import { colors, fonts } from '../theme';
@@ -10,7 +11,7 @@ const PREFS_KEY = 'cabcrm.prefs.v1';
 const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'America/New_York', 'Europe/London'];
 
 export default function ProfileScreen() {
-  const { session, logout, restoreSample, mode } = useStore();
+  const { session, logout, restoreSample, mode, data } = useStore();
   const router = useRouter();
   const [company, setCompany] = useState('VehicoCRM');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
@@ -40,6 +41,7 @@ export default function ProfileScreen() {
     <Screen>
       <PageHeader title="Profile" subtitle={session?.desk} back />
       <View style={{ padding: 20, gap: 14 }}>
+        <RiseIn>
         <Card>
           <Text style={{ fontFamily: fonts.display, fontSize: 28, color: colors.ink }}>{session?.name}</Text>
           <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{session?.role === 'admin' ? 'Admin' : 'Calling executive'}</Text>
@@ -47,6 +49,8 @@ export default function ProfileScreen() {
           <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{session?.mobile}</Text>
           <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Signed in on this phone'}</Text>
         </Card>
+        </RiseIn>
+        <RiseIn delay={80}>
         {session?.role === 'admin' ? (
           <Card>
             <Text style={{ fontFamily: fonts.display, fontSize: 22, color: colors.ink }}>Team & Users</Text>
@@ -62,6 +66,15 @@ export default function ProfileScreen() {
         <RowLink icon="document-text-outline" title="Notes" detail="Remarks on this desk" onPress={() => router.push('/notes')} />
         <RowLink icon="mic-outline" title="Recordings" detail="Playback and upload" onPress={() => router.push('/recordings')} />
         <RowLink icon="sync-outline" title="Call log sync" detail="Match the handset log" onPress={() => router.push('/sync')} />
+        <RowLink icon="person-circle-outline" title="Drivers" detail={`${data.drivers.length} captains`} onPress={() => router.push('/drivers')} />
+        <RowLink icon="car-sport-outline" title="Vehicles" detail={`${data.vehicles.length} cars`} onPress={() => router.push('/vehicles')} />
+        <RowLink icon="lock-closed-outline" title="Account security" detail="Change the password on this phone" onPress={() => router.push('/security')} />
+        <RowLink icon="phone-portrait-outline" title="This device" detail="Local reminder registration" onPress={() => router.push('/device')} />
+        {session?.role === 'admin' ? (
+          <RowLink icon="key-outline" title="Access" detail="Permissions saved on this phone" onPress={() => router.push('/access')} />
+        ) : null}
+        </RiseIn>
+        <RiseIn delay={140}>
         <Card>
           <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>CRM preferences</Text>
           <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 4, marginBottom: 8 }}>Saved on this phone. Nothing is sent until an API address is set.</Text>
@@ -79,6 +92,7 @@ export default function ProfileScreen() {
             }}
           />
         </Card>
+        </RiseIn>
         <Button label="Restore sample desk" tone="ghost" onPress={async () => restoreSample()} />
         <Button
           label="Sign out"

@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
-import { Card, ChoiceRow, Muted, PageHeader, Screen } from '../../components/ui';
+import { Card, ChoiceRow, Muted, PageHeader, Screen, SelectField } from '../../components/ui';
 import { formatDay, inr } from '../../lib/dates';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
@@ -33,6 +33,18 @@ export default function BookingDetailScreen() {
       <View style={{ marginHorizontal: 20 }}>
         <ChoiceRow label="Booking status" options={BOOKING_STATUSES} value={booking.status} onChange={(status: BookingStatus) => void saveBooking({ ...booking, status }, false)} />
         <ChoiceRow label="Payment" options={PAYMENT_STATUSES} value={booking.paymentStatus} onChange={(paymentStatus: PaymentStatus) => void saveBooking({ ...booking, paymentStatus }, false)} />
+        <SelectField
+          label="Driver / captain"
+          options={['Unassigned', ...data.drivers.filter((driver) => driver.status === 'Active').map((driver) => driver.name)]}
+          value={booking.driver || 'Unassigned'}
+          onChange={(name) => void saveBooking({ ...booking, driver: name === 'Unassigned' ? undefined : name }, false)}
+        />
+        <SelectField
+          label="Vehicle number"
+          options={['Unassigned', ...data.vehicles.filter((vehicle) => vehicle.status === 'Active').map((vehicle) => vehicle.number)]}
+          value={booking.vehicleNumber || 'Unassigned'}
+          onChange={(number) => void saveBooking({ ...booking, vehicleNumber: number === 'Unassigned' ? undefined : number }, false)}
+        />
       </View>
     </Screen>
   );
