@@ -10,7 +10,7 @@ const PREFS_KEY = 'cabcrm.prefs.v1';
 const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'America/New_York', 'Europe/London'];
 
 export default function ProfileScreen() {
-  const { session, apiBase, setApiBase, logout, restoreSample, mode, loadPreferences, savePreferences, updateAdminProfile } = useStore();
+  const { session, apiBase, setApiBase, logout, mode, loadPreferences, savePreferences, updateAdminProfile } = useStore();
   const router = useRouter();
   const [url, setUrl] = useState(apiBase);
   const [saved, setSaved] = useState('');
@@ -63,7 +63,7 @@ export default function ProfileScreen() {
           <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{session?.role === 'admin' ? 'Admin' : 'Calling executive'}</Text>
           <Text style={{ fontFamily: fonts.medium, color: colors.ink, marginTop: 8 }}>{session?.email}</Text>
           <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{session?.mobile}</Text>
-          <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Signed in on this phone'}</Text>
+          <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Not signed in to the CRM API'}</Text>
         </Card>
         <Field label="CRM API address" value={url} onChangeText={setUrl} placeholder="https://api.example.com" keyboardType="default" />
         {saved ? <Text style={{ fontFamily: fonts.medium, color: colors.forest }}>{saved}</Text> : null}
@@ -84,8 +84,11 @@ export default function ProfileScreen() {
             <Button label="Add executive" onPress={() => router.push('/team?create=1')} />
             <View style={{ height: 8 }} />
             <Button label="Open Team & Users" tone="ghost" onPress={() => router.push('/team')} />
+            <View style={{ height: 8 }} />
+            <Button label="Export CSV report" tone="ghost" onPress={() => router.push('/reports/export')} />
           </Card>
         ) : null}
+        <RowLink icon="bus-outline" title="Fleet" detail="Drivers and vehicles" onPress={() => router.push('/fleet')} />
         <RowLink icon="checkbox-outline" title="Tasks" detail="Due work for the desk" onPress={() => router.push('/tasks')} />
         <RowLink icon="document-text-outline" title="Notes" detail="Remarks on this desk" onPress={() => router.push('/notes')} />
         <RowLink icon="mic-outline" title="Recordings" detail="Playback and upload" onPress={() => router.push('/recordings')} />
@@ -128,7 +131,6 @@ export default function ProfileScreen() {
             }}
           />
         </Card>
-        <Button label="Restore sample desk" tone="ghost" onPress={async () => restoreSample()} />
         <Button
           label="Sign out"
           onPress={async () => {

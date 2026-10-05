@@ -6,6 +6,7 @@ import type { AppData, SessionUser } from '../types';
 const DATA_KEY = 'cabcrm.desk.v1';
 const SESSION_KEY = 'cabcrm.session.v1';
 const API_KEY = 'cabcrm.apiBase.v1';
+const DEVICE_KEY = 'cabcrm.deviceToken.v1';
 
 export async function loadDesk(): Promise<AppData | null> {
   const raw = await AsyncStorage.getItem(DATA_KEY);
@@ -55,6 +56,14 @@ function parseSession(raw: string): StoredSession | null {
   } catch {
     return null;
   }
+}
+
+export async function loadDeviceToken(): Promise<string | null> {
+  return AsyncStorage.getItem(DEVICE_KEY);
+}
+
+export async function saveDeviceToken(value: string): Promise<void> {
+  await AsyncStorage.setItem(DEVICE_KEY, value);
 }
 
 export async function saveSession(session: StoredSession | null): Promise<void> {

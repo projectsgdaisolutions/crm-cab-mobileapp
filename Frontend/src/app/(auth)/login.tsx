@@ -22,7 +22,7 @@ export default function LoginScreen() {
         <Text style={styles.tagline}>Smart CRM for Vehicle Businesses</Text>
       </View>
       <Text style={styles.word}>Welcome back</Text>
-      <Text style={styles.lede}>Sign in to manage customers, leads, calls, and bookings.</Text>
+      <Text style={styles.lede}>Sign in with your CRM API account. This app does not use a local demo desk.</Text>
       <View style={styles.card}>
         <Field
           label="Email or mobile"
@@ -47,6 +47,9 @@ export default function LoginScreen() {
         />
         <Pressable onPress={() => router.push('/(auth)/forgot-password')} style={styles.linkBtn}>
           <Text style={styles.link}>Forgot password</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push('/(auth)/register')} style={styles.linkBtn}>
+          <Text style={styles.link}>Create an account</Text>
         </Pressable>
       </View>
     </View>

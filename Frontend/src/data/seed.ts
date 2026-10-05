@@ -682,6 +682,44 @@ export function createSeed(now = new Date()): AppData {
         createdAt: stamp(-15, 14, 20),
       },
     ],
+    drivers: [
+      {
+        id: 'D-1',
+        name: 'Rafiq Khan',
+        phone: '9820011111',
+        licenseNumber: 'MH-LIC-4421',
+        status: 'active',
+        address: 'Mumbai',
+      },
+      {
+        id: 'D-2',
+        name: 'Suresh',
+        phone: '9848011182',
+        licenseNumber: 'TS-LIC-1182',
+        status: 'active',
+        address: 'Hyderabad',
+      },
+    ],
+    vehicles: [
+      {
+        id: 'V-1',
+        registrationNumber: 'MH 01 AB 4421',
+        vehicleType: 'Sedan',
+        makeModel: 'Dzire',
+        capacity: 4,
+        status: 'active',
+        driverId: 'D-1',
+      },
+      {
+        id: 'V-2',
+        registrationNumber: 'TS 09 EC 1182',
+        vehicleType: 'Sedan',
+        makeModel: 'Etios',
+        capacity: 4,
+        status: 'active',
+        driverId: 'D-2',
+      },
+    ],
     tasks: [
       {
         id: 'T-410',

@@ -129,10 +129,44 @@ export interface Booking {
   status: BookingStatus;
   driver?: string;
   vehicleNumber?: string;
+  driverId?: string;
+  vehicleId?: string;
   remarks: string;
   createdBy: string;
   createdAt: string;
   syncState: SyncState;
+}
+
+export interface Driver {
+  id: string;
+  name: string;
+  phone: string;
+  licenseNumber: string;
+  status: 'active' | 'inactive';
+  address?: string;
+}
+
+export interface Vehicle {
+  id: string;
+  registrationNumber: string;
+  vehicleType: string;
+  makeModel?: string;
+  capacity?: number;
+  status: 'active' | 'inactive';
+  driverId?: string;
+}
+
+export interface MobileDevice {
+  id: string;
+  deviceToken: string;
+  platform: string;
+  appVersion?: string;
+}
+
+export interface RolePermission {
+  role: string;
+  permissionKey: string;
+  allowed: boolean;
 }
 
 export interface CallRecord {
@@ -225,6 +259,8 @@ export interface AppData {
   activities: Activity[];
   executives: Executive[];
   tasks: TaskItem[];
+  drivers: Driver[];
+  vehicles: Vehicle[];
 }
 
 export const LEAD_STATUSES: LeadStatus[] = [

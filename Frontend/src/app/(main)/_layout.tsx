@@ -14,8 +14,8 @@ function TabIcon({ focused, name }: { focused: boolean; name: keyof typeof Ionic
 }
 
 export default function MainLayout() {
-  const { ready, session, awaitingReturn, openDisposition } = useStore();
-  if (ready && !session) return <Redirect href="/(auth)/login" />;
+  const { ready, session, csrfToken, awaitingReturn, openDisposition } = useStore();
+  if (ready && (!session || !csrfToken || csrfToken === 'demo')) return <Redirect href="/(auth)/login" />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       {awaitingReturn ? (

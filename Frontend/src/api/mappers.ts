@@ -6,17 +6,21 @@ import type {
   CallDirection,
   CallRecord,
   Customer,
+  Driver,
   EntityType,
   Executive,
   FollowUp,
   FollowUpType,
   Lead,
+  Note,
   PaymentStatus,
   Recording,
   Role,
+  RolePermission,
   SessionUser,
   TaskItem,
   TeamRole,
+  Vehicle,
   VehicleType,
 } from '../types';
 
@@ -262,8 +266,10 @@ export function fromApiBooking(raw: Record<string, unknown>): Booking {
     fare: Number(raw.amount ?? 0) || 0,
     paymentStatus: (raw.paymentStatus as PaymentStatus) ?? 'Unpaid',
     status: (raw.bookingStatus as BookingStatus) ?? 'Enquiry',
-    driver: details.driver,
-    vehicleNumber: details.vehicleNumber,
+    driver: raw.driverName ? String(raw.driverName) : details.driver,
+    vehicleNumber: raw.registrationNumber ? String(raw.registrationNumber) : details.vehicleNumber,
+    driverId: raw.driverId == null ? undefined : String(raw.driverId),
+    vehicleId: raw.vehicleId == null ? undefined : String(raw.vehicleId),
     remarks: String(raw.remarks ?? ''),
     createdBy: String(raw.createdBy ?? ''),
     createdAt: String(raw.createdAt ?? new Date().toISOString()),
@@ -460,6 +466,93 @@ export function fromApiActivity(raw: Record<string, unknown>): Activity | null {
     remarks: String(raw.description ?? raw.title ?? ''),
     actor: String(raw.actor ?? ''),
   };
+}
+
+export function fromApiNote(raw: Record<string, unknown>, context: MapperContext): Note {
+  const kind = String(raw.entityType ?? raw.type ?? '').toLowerCase();
+  const entityType: EntityType = kind === 'lead' ? 'lead' : 'customer';
+  const entityId = String(raw.entityId ?? raw.customerOrLeadId ?? '');
+  const named = entityType === 'customer'
+    ? context.customers?.find((item) => item.id === entityId)?.name
+    : context.leads?.find((item) => item.id === entityId)?.name;
+  return {
+    id: String(raw.id ?? ''),
+    entityType,
+    entityId,
+    entityName: String(raw.entityName ?? named ?? ''),
+    body: String(raw.text ?? raw.body ?? raw.notes ?? ''),
+    createdBy: String(raw.createdByName ?? raw.createdBy ?? raw.authorName ?? ''),
+    createdAt: String(raw.createdAt ?? raw.createdOn ?? new Date().toISOString()).replace(' ', 'T'),
+    syncState: 'synced',
+  };
+}
+
+export function toApiNote(note: Note): Record<string, unknown> {
+  return {
+    entityType: note.entityType === 'customer' ? 'Customer' : 'Lead',
+    entityId: note.entityId,
+    text: note.body,
+  };
+}
+
+export function fromApiDriver(raw: Record<string, unknown>): Driver {
+  const status = String(raw.status ?? 'active').toLowerCase() === 'inactive' ? 'inactive' : 'active';
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    phone: String(raw.phone ?? ''),
+    licenseNumber: String(raw.licenseNumber ?? raw.license ?? ''),
+    status,
+    address: raw.address ? String(raw.address) : undefined,
+  };
+}
+
+export function toApiDriver(driver: Driver): Record<string, unknown> {
+  return {
+    name: driver.name,
+    phone: driver.phone,
+    licenseNumber: driver.licenseNumber,
+    status: driver.status,
+    address: driver.address ?? '',
+  };
+}
+
+export function fromApiVehicle(raw: Record<string, unknown>): Vehicle {
+  const status = String(raw.status ?? 'active').toLowerCase() === 'inactive' ? 'inactive' : 'active';
+  return {
+    id: String(raw.id ?? ''),
+    registrationNumber: String(raw.registrationNumber ?? raw.vehicleNumber ?? ''),
+    vehicleType: String(raw.vehicleType ?? 'Sedan'),
+    makeModel: raw.makeModel ? String(raw.makeModel) : undefined,
+    capacity: raw.capacity == null ? undefined : Number(raw.capacity) || undefined,
+    status,
+    driverId: raw.driverId == null ? undefined : String(raw.driverId),
+  };
+}
+
+export function toApiVehicle(vehicle: Vehicle): Record<string, unknown> {
+  return {
+    registrationNumber: vehicle.registrationNumber,
+    vehicleType: vehicle.vehicleType,
+    makeModel: vehicle.makeModel ?? '',
+    capacity: vehicle.capacity ?? 4,
+    status: vehicle.status,
+    ...(vehicle.driverId ? { driverId: vehicle.driverId } : {}),
+  };
+}
+
+export function fromApiPermission(raw: Record<string, unknown>): RolePermission {
+  return {
+    role: String(raw.role ?? ''),
+    permissionKey: String(raw.permissionKey ?? raw.key ?? ''),
+    allowed: raw.allowed === true || raw.allowed === 1 || String(raw.allowed) === 'true',
+  };
+}
+
+export function toApiBulkCall(call: CallRecord, syncId?: string): Record<string, unknown> | null {
+  const body = toApiCall(call);
+  if (!body) return null;
+  return { ...body, syncId: syncId ?? call.id };
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | null {

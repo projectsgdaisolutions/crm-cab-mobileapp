@@ -39,7 +39,7 @@ export default function RecordingsScreen() {
       <Card style={{ margin: 20 }}>
         <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>Device limits</Text>
         <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 6, lineHeight: 20 }}>
-          Automatic sync depends on the Android version, the dialer, and whether a recording file is readable. Missed calls often have no file. This app does not record the call itself. The CRM API lists recordings for admins only and has no upload route, so files you pick stay on this phone.
+          Automatic sync depends on the Android version, the dialer, and whether a recording file is readable. Missed calls often have no file. This app does not record the call itself. Files you pick upload to POST /recordings/upload.php for the latest call when you are signed in to the CRM API.
         </Text>
         <Text style={{ fontFamily: fonts.medium, color: colors.forest, marginTop: 8 }}>
           {found > 0 ? `${found} audio files found in common recording folders.` : 'No recording folder was readable in this runtime. Use upload for a file you can access.'}
@@ -100,7 +100,7 @@ export default function RecordingsScreen() {
               fileName: asset.name,
               mimeType: asset.mimeType,
             });
-            setMessage(`Attached ${asset.name}. It stays on this phone until the CRM API accepts the upload.`);
+            setMessage(`Attached ${asset.name}.`);
           }}
           style={{ backgroundColor: colors.forest, borderRadius: 14, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}
         >

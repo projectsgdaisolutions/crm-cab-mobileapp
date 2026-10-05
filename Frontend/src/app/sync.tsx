@@ -62,7 +62,7 @@ export default function SyncScreen() {
         <Card>
           <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>What gets synced</Text>
           <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 6, lineHeight: 20 }}>
-            Outgoing calls start in the native dialer. When the call ends, log the outcome. This screen also reads recent calls from the Android call log, matches numbers to customers and leads, and posts them to the CRM API.
+            Outgoing calls start in the native dialer. When the call ends, log the outcome. This screen also reads recent calls from the Android call log, matches numbers to customers and leads, and posts them in one request to POST /calls/bulk-sync.php.
           </Text>
           {access ? <Text style={{ marginTop: 8, fontFamily: fonts.medium, color: colors.forest }}>{access.detail}</Text> : null}
         </Card>
