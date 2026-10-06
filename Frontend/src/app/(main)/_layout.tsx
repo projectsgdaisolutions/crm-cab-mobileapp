@@ -16,6 +16,8 @@ function TabIcon({ focused, name, badge = 0 }: { focused: boolean; name: keyof t
 }
 
 export default function MainLayout() {
+  const { ready, session, csrfToken, awaitingReturn, openDisposition } = useStore();
+  if (ready && (!session || !csrfToken || csrfToken === 'demo')) return <Redirect href="/(auth)/login" />;
   const { ready, session, awaitingReturn, openDisposition, data } = useStore();
   const missed = data.calls.filter((call) => call.status === 'Missed').length;
   if (ready && !session) return <Redirect href="/(auth)/login" />;

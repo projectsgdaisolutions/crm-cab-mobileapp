@@ -6,7 +6,7 @@ import { makeId } from '../../lib/ids';
 import { isPlausibleMobile } from '../../lib/phone';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
-import type { Executive } from '../../types';
+import type { Executive, RolePermission } from '../../types';
 
 const ROLE_NOTE: Record<Executive['role'], string> = {
   Admin: 'Full system access — manage users, settings, billing',
@@ -29,7 +29,7 @@ const MATRIX: Array<{ feature: string; admin: boolean; exec: boolean }> = [
 
 export default function TeamScreen() {
   const params = useLocalSearchParams<{ create?: string }>();
-  const { data, session, saveExecutive } = useStore();
+  const { data, session, saveExecutive, loadPermissions, savePermission } = useStore();
   const isAdmin = session?.role === 'admin';
   const openedCreate = useRef(false);
   const [query, setQuery] = useState('');
@@ -42,6 +42,7 @@ export default function TeamScreen() {
   const [password, setPassword] = useState('');
   const [active, setActive] = useState<'Active' | 'Inactive'>('Active');
   const [error, setError] = useState('');
+  const [permissions, setPermissions] = useState<RolePermission[]>([]);
 
   const people = data.executives.filter((person) => {
     if (roleFilter !== 'All' && person.role !== roleFilter) return false;
@@ -69,6 +70,11 @@ export default function TeamScreen() {
       startCreate();
     }
   }, [params.create, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    void loadPermissions().then(setPermissions).catch(() => undefined);
+  }, [isAdmin, loadPermissions]);
 
   function startEdit(person: Executive) {
     setEditing(person);
@@ -205,15 +211,29 @@ export default function TeamScreen() {
         <Card>
           <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>Role and permission matrix</Text>
           <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 4, marginBottom: 10 }}>
-            Access is shown here for the calling desk. A live CRM still enforces it on the server.
+            {permissions.length ? 'Live permissions from GET /permissions/index.php. Tap a row to toggle.' : 'Access is shown here for the calling desk. A live CRM still enforces it on the server.'}
           </Text>
-          {MATRIX.map((row) => (
-            <View key={row.feature} style={{ flexDirection: 'row', paddingVertical: 6 }}>
-              <Text style={{ flex: 1, fontFamily: fonts.medium, color: colors.ink }}>{row.feature}</Text>
-              <Text style={{ width: 54, textAlign: 'center', color: row.admin ? colors.moss : colors.faint }}>{row.admin ? 'Admin' : '—'}</Text>
-              <Text style={{ width: 64, textAlign: 'center', color: row.exec ? colors.moss : colors.faint }}>{row.exec ? 'Exec' : '—'}</Text>
-            </View>
-          ))}
+          {permissions.length
+            ? permissions.map((row) => (
+              <Pressable
+                key={`${row.role}-${row.permissionKey}`}
+                onPress={async () => {
+                  const next = await savePermission({ ...row, allowed: !row.allowed });
+                  setPermissions((current) => current.map((item) => (item.role === next.role && item.permissionKey === next.permissionKey ? next : item)));
+                }}
+                style={{ flexDirection: 'row', paddingVertical: 6 }}
+              >
+                <Text style={{ flex: 1, fontFamily: fonts.medium, color: colors.ink }}>{row.role} · {row.permissionKey}</Text>
+                <Text style={{ color: row.allowed ? colors.moss : colors.faint }}>{row.allowed ? 'Allowed' : 'Denied'}</Text>
+              </Pressable>
+            ))
+            : MATRIX.map((row) => (
+              <View key={row.feature} style={{ flexDirection: 'row', paddingVertical: 6 }}>
+                <Text style={{ flex: 1, fontFamily: fonts.medium, color: colors.ink }}>{row.feature}</Text>
+                <Text style={{ width: 54, textAlign: 'center', color: row.admin ? colors.moss : colors.faint }}>{row.admin ? 'Admin' : '—'}</Text>
+                <Text style={{ width: 64, textAlign: 'center', color: row.exec ? colors.moss : colors.faint }}>{row.exec ? 'Exec' : '—'}</Text>
+              </View>
+            ))}
         </Card>
       </View>
     </Screen>

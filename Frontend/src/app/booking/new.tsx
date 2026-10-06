@@ -36,6 +36,9 @@ export default function BookingFormScreen() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('Unpaid');
   const [status, setStatus] = useState<BookingStatus>('Enquiry');
   const [driver, setDriver] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [driverId, setDriverId] = useState('');
+  const [vehicleId, setVehicleId] = useState('');
   const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
 
@@ -84,6 +87,30 @@ export default function BookingFormScreen() {
         <Field label="Fare *" value={fare} onChangeText={setFare} keyboardType="number-pad" />
         <ChoiceRow label="Booking status" options={BOOKING_STATUSES} value={status} onChange={setStatus} />
         <ChoiceRow label="Payment status" options={PAYMENT_STATUSES} value={paymentStatus} onChange={setPaymentStatus} />
+        {data.drivers.length ? (
+          <View style={{ marginBottom: 10 }}>
+            <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginBottom: 6 }}>Assign driver</Text>
+            {data.drivers.filter((item) => item.status === 'active').map((item) => (
+              <Pressable key={item.id} onPress={() => { setDriverId(item.id); setDriver(item.name); }}>
+                <Text style={{ paddingVertical: 6, fontFamily: fonts.semibold, color: item.id === driverId ? colors.saffronDeep : colors.ink }}>
+                  {item.name} · {item.phone}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        {data.vehicles.length ? (
+          <View style={{ marginBottom: 10 }}>
+            <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginBottom: 6 }}>Assign vehicle</Text>
+            {data.vehicles.filter((item) => item.status === 'active').map((item) => (
+              <Pressable key={item.id} onPress={() => { setVehicleId(item.id); setVehicleNumber(item.registrationNumber); if (item.vehicleType) setVehicleType(item.vehicleType as VehicleType); }}>
+                <Text style={{ paddingVertical: 6, fontFamily: fonts.semibold, color: item.id === vehicleId ? colors.saffronDeep : colors.ink }}>
+                  {item.registrationNumber} · {item.vehicleType}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         <Field label="Driver / vehicle details" value={driver} onChangeText={setDriver} placeholder="Driver name and vehicle notes" multiline />
         <Field label="Remarks" value={remarks} onChangeText={setRemarks} multiline />
         <Field label="Booking ID" value="Generated on save" onChangeText={() => undefined} editable={false} />
@@ -113,6 +140,9 @@ export default function BookingFormScreen() {
               paymentStatus,
               status,
               driver: driver.trim() || undefined,
+              vehicleNumber: vehicleNumber.trim() || undefined,
+              driverId: driverId || undefined,
+              vehicleId: vehicleId || undefined,
               remarks: remarks.trim(),
               createdBy: session?.name ?? 'Calling executive',
               createdAt: new Date().toISOString(),

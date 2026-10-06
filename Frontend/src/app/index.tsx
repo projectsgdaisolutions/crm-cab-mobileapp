@@ -4,7 +4,7 @@ import { useStore } from '../state/store';
 import { colors } from '../theme';
 
 export default function Gate() {
-  const { ready, session } = useStore();
+  const { ready, session, csrfToken } = useStore();
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.forest, alignItems: 'center', justifyContent: 'center' }}>
@@ -12,6 +12,6 @@ export default function Gate() {
       </View>
     );
   }
-  if (!session) return <Redirect href="/(auth)/login" />;
+  if (!session || !csrfToken || csrfToken === 'demo') return <Redirect href="/(auth)/login" />;
   return <Redirect href="/(main)" />;
 }

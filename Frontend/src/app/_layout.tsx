@@ -1,17 +1,34 @@
 import { Fraunces_500Medium, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DispositionSheet } from '../components/DispositionSheet';
-import { StoreProvider } from '../state/store';
+import { StoreProvider, useStore } from '../state/store';
 import { colors } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+function ApiSessionGuard() {
+  const { ready, session, csrfToken } = useStore();
+  const segments = useSegments();
+  const router = useRouter();
+  const inAuth = segments[0] === '(auth)';
+  const live = Boolean(session && csrfToken && csrfToken !== 'demo');
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!live && !inAuth) {
+      router.replace('/(auth)/login');
+    }
+  }, [inAuth, live, ready, router]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -42,6 +59,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StoreProvider>
+        <ApiSessionGuard />
         <View style={Platform.OS === 'web' ? styles.webBg : styles.fill}>
           <View style={Platform.OS === 'web' ? styles.phone : styles.fill}>
             <StatusBar style="light" />
