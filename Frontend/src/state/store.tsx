@@ -4,7 +4,11 @@ import { AppState, Platform } from 'react-native';
 import { ApiError, api, pullDesk, setCsrfRefreshHandler, setUnauthorizedHandler } from '../api/client';
 import type { MapperContext } from '../api/mappers';
 import { toDriverVehicle } from '../api/mappers';
+import { ApiError, api, pullDesk } from '../api/client';
+import { createSeed, demoUser, demoUserFor, findDemoUser, isDemoLogin } from '../data/seed';
+import { loadLocalPasswords } from '../lib/localAccount';
 import { makeId } from '../lib/ids';
+import { nextFollowUpForLead } from '../lib/scheduleSync';
 import type { DeviceCall } from '../lib/syncCalls';
 import { loadApiBase, loadDesk, loadDeviceToken, loadSession, saveApiBase, saveDesk, saveDeviceToken, saveSession } from '../storage/persist';
 import type {
@@ -15,6 +19,7 @@ import type {
   CallStatus,
   Customer,
   Driver,
+  FleetVehicle,
   EntityType,
   Executive,
   FollowUp,
@@ -91,6 +96,8 @@ interface StoreValue {
   loadPermissions: () => Promise<RolePermission[]>;
   savePermission: (input: { role: string; permissionKey: string; allowed: boolean }) => Promise<RolePermission>;
   exportReport: (query: { resource: string; dateFrom?: string; dateTo?: string }) => Promise<string>;
+  saveDriver: (input: Driver, creating: boolean) => Promise<Driver>;
+  saveVehicle: (input: FleetVehicle, creating: boolean) => Promise<FleetVehicle>;
   importDeviceCalls: (calls: Array<DeviceCall & { entityType?: EntityType; entityId?: string; entityName?: string; duplicate: boolean }>, createUnknown: boolean) => Promise<{ added: number; leads: number }>;
   attachRecording: (input: {
     callId?: string;
@@ -159,6 +166,12 @@ function completeDesk(stored: AppData | null): AppData {
     tasks: asDeskList(stored.tasks, empty.tasks),
     drivers: asDeskList(stored.drivers, empty.drivers),
     vehicles: asDeskList(stored.vehicles, empty.vehicles),
+    ...seed,
+    ...stored,
+    executives: stored.executives ?? seed.executives,
+    tasks: stored.tasks ?? seed.tasks,
+    drivers: stored.drivers ?? seed.drivers,
+    vehicles: stored.vehicles ?? seed.vehicles,
   };
 }
 
@@ -378,6 +391,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       await applySession(null, null);
       throw new Error('PHP login succeeded but the session cookie was not kept. Use http://localhost:43123 for the app and http://localhost:8000/api for PHP, then sign in again.');
+    if (base) {
+      try {
+        const result = await api.login(base, identifier.trim(), password);
+        setSession(result.user);
+        setToken(result.token);
+        sessionRef.current = result.user;
+        tokenRef.current = result.token;
+        await saveSession({ token: result.token, user: result.user });
+        try {
+          const remote = await pullDesk(base, result.token);
+          commit({
+            ...createSeed(),
+            ...remote,
+            activities: dataRef.current.activities,
+            executives: remote.executives ?? dataRef.current.executives,
+            tasks: remote.tasks ?? dataRef.current.tasks,
+            drivers: remote.drivers ?? dataRef.current.drivers,
+            vehicles: remote.vehicles ?? dataRef.current.vehicles,
+          });
+        } catch (error) {
+          setNotice(error instanceof Error ? `${error.message} Showing the desk saved on this phone.` : 'Showing the desk saved on this phone.');
+        }
+        return;
+      } catch (error) {
+        const overrides = await loadLocalPasswords();
+        const localOk = overrides[identifier.trim().toLowerCase()] === password;
+        if (!(error instanceof ApiError) || !error.network || !(isDemoLogin(identifier, password) || localOk)) {
+          throw error instanceof Error ? error : new Error('Sign in failed.');
+        }
+        setNotice('API is unreachable. Signed in with the account saved on this phone.');
+      }
+    }
+    const overrides = await loadLocalPasswords();
+    const overrideKey = identifier.trim().toLowerCase();
+    const localPassword = overrides[overrideKey];
+    if (localPassword) {
+      if (localPassword !== password) throw new Error('Those credentials were not accepted. Use the account from the CRM API.');
+      const localUser = findDemoUser(identifier);
+      if (localUser) {
+        setSession(localUser);
+        setToken('demo');
+        sessionRef.current = localUser;
+        tokenRef.current = 'demo';
+        await saveSession({ token: 'demo', user: localUser });
+        return;
+      }
+    }
+    const builtIn = localPassword ? null : demoUserFor(identifier, password);
+    if (builtIn) {
+      setSession(builtIn);
+      setToken('demo');
+      sessionRef.current = builtIn;
+      tokenRef.current = 'demo';
+      await saveSession({ token: 'demo', user: builtIn });
+      return;
     }
     const remote = await pullDesk(base, emptyDesk());
     commit({
@@ -761,8 +829,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (row.status === 'Completed' && !row.completedAt) row = { ...row, completedAt: new Date().toISOString() };
     patch((current) => {
       const followUps = creating ? [row, ...current.followUps] : current.followUps.map((item) => (item.id === row.id ? row : item));
+      const leads = nextFollowUpForLead(current.leads, { ...row, creating }, new Date().toISOString());
       return addActivity(
-        { ...current, followUps },
+        { ...current, followUps, leads },
         {
           entityType: row.entityType,
           entityId: row.entityId,
@@ -1006,6 +1075,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { added, leads };
   }, [addActivity, contextOf, patch]);
 
+  const saveDriver = useCallback(async (input: Driver, creating: boolean) => {
+    const row = { ...input, syncState: 'local' as SyncState };
+    patch((current) => {
+      const drivers = creating ? [row, ...current.drivers] : current.drivers.map((item) => (item.id === row.id ? row : item));
+      return addActivity(
+        { ...current, drivers },
+        {
+          entityType: 'customer',
+          entityId: row.id,
+          type: creating ? 'Driver added' : 'Driver updated',
+          at: new Date().toISOString(),
+          remarks: `${row.name} · ${row.status} · ${row.city}`,
+        },
+      );
+    });
+    return row;
+  }, [addActivity, patch]);
+
+  const saveVehicle = useCallback(async (input: FleetVehicle, creating: boolean) => {
+    const row = { ...input, syncState: 'local' as SyncState };
+    patch((current) => {
+      const vehicles = creating ? [row, ...current.vehicles] : current.vehicles.map((item) => (item.id === row.id ? row : item));
+      return addActivity(
+        { ...current, vehicles },
+        {
+          entityType: 'customer',
+          entityId: row.id,
+          type: creating ? 'Vehicle added' : 'Vehicle updated',
+          at: new Date().toISOString(),
+          remarks: `${row.number} · ${row.type} · ${row.status}`,
+        },
+      );
+    });
+    return row;
+  }, [addActivity, patch]);
+
   const attachRecording = useCallback(async (input: {
     callId?: string;
     entityType?: EntityType;
@@ -1167,6 +1272,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadPermissions,
     savePermission,
     exportReport,
+    saveDriver,
+    saveVehicle,
     importDeviceCalls,
     attachRecording,
   }), [
@@ -1176,6 +1283,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     openDisposition, dismissDisposition, saveDisposition, saveCustomer, saveLead,
     addNote, saveFollowUp, saveBooking, saveExecutive, saveTask, registerAccount, saveDriver, saveVehicle,
     assignBookingDriver, loadPermissions, savePermission, exportReport, importDeviceCalls, attachRecording,
+    addNote, saveFollowUp, saveBooking, saveExecutive, saveTask, saveDriver, saveVehicle, importDeviceCalls, attachRecording,
   ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

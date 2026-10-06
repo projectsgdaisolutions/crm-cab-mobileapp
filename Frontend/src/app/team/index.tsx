@@ -110,7 +110,6 @@ export default function TeamScreen() {
       <View style={{ padding: 20, gap: 12 }}>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Count label="Admins" value={count('Admin')} />
-          <Count label="Managers" value={count('Manager')} />
           <Count label="Executives" value={count('Calling Executive')} />
         </View>
         <Button label="Add Calling Executive" onPress={startCreate} />
@@ -176,7 +175,7 @@ export default function TeamScreen() {
           </Card>
         ) : null}
         <Field label="Search" value={query} onChangeText={setQuery} placeholder="Search team members" />
-        <ChoiceRow label="Role" options={['All', 'Admin', 'Manager', 'Calling Executive']} value={roleFilter} onChange={setRoleFilter} />
+        <ChoiceRow label="Role" options={['All', 'Admin', 'Calling Executive']} value={roleFilter} onChange={setRoleFilter} />
         {people.map((person) => (
           <Card key={person.id}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>

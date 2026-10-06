@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Button, ChoiceRow, Field, PageHeader, Screen } from '../../components/ui';
+import { Text, View } from 'react-native';
+import { Button, ChoiceRow, Field, PageHeader, Screen, SelectField } from '../../components/ui';
 import { ymd } from '../../lib/dates';
 import { makeId } from '../../lib/ids';
 import { useStore } from '../../state/store';
@@ -12,15 +12,20 @@ export default function BookingFormScreen() {
   const params = useLocalSearchParams<{ entityType?: string; entityId?: string }>();
   const { data, saveBooking, session } = useStore();
   const router = useRouter();
-  const parties = [
-    ...data.customers.map((item) => ({ type: 'customer' as const, id: item.id, name: item.name, mobile: item.mobile, pickup: item.pickup, drop: item.drop })),
-    ...data.leads.map((item) => ({ type: 'lead' as const, id: item.id, name: item.name, mobile: item.mobile, pickup: item.pickup, drop: item.drop })),
-  ];
+
+  const customers = data.customers.map((item) => ({ type: 'customer' as const, id: item.id, name: item.name, mobile: item.mobile, pickup: item.pickup, drop: item.drop }));
+  const leads = data.leads.map((item) => ({ type: 'lead' as const, id: item.id, name: item.name, mobile: item.mobile, pickup: item.pickup, drop: item.drop }));
+  const parties = [...customers, ...leads];
+
   const initial = parties.find((item) => item.id === params.entityId) ?? parties[0];
   const [kind, setKind] = useState<'Customer' | 'Lead'>(initial?.type === 'lead' ? 'Lead' : 'Customer');
   const [partyId, setPartyId] = useState(initial?.id ?? '');
-  const visible = parties.filter((item) => item.type === (kind === 'Lead' ? 'lead' : 'customer'));
+
+  const visible = kind === 'Lead' ? leads : customers;
+  const partyOptions = visible.map((item) => item.name);
   const party = parties.find((item) => item.id === partyId) ?? visible[0];
+  const selectedName = party?.name ?? partyOptions[0] ?? '';
+
   const [pickup, setPickup] = useState(initial?.pickup ?? '');
   const [drop, setDrop] = useState(initial?.drop ?? '');
   const [travelDate, setTravelDate] = useState(ymd(new Date()));
@@ -41,13 +46,14 @@ export default function BookingFormScreen() {
     <Screen>
       <PageHeader title="New booking" subtitle={party?.name ?? 'Customer or lead'} back />
       <View style={{ padding: 20 }}>
+        {/* Customer / Lead kind toggle */}
         <ChoiceRow
-          label="Customer or lead type *"
+          label="Customer / Lead *"
           options={['Customer', 'Lead']}
           value={kind}
           onChange={(next) => {
             setKind(next);
-            const match = parties.find((item) => item.type === (next === 'Lead' ? 'lead' : 'customer'));
+            const match = next === 'Lead' ? leads[0] : customers[0];
             if (match) {
               setPartyId(match.id);
               setPickup(match.pickup);
@@ -55,14 +61,22 @@ export default function BookingFormScreen() {
             }
           }}
         />
-        <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginBottom: 6 }}>Customer / lead *</Text>
-        {(visible.length ? visible : parties).slice(0, 8).map((item) => (
-          <Pressable key={item.id} onPress={() => { setPartyId(item.id); setKind(item.type === 'lead' ? 'Lead' : 'Customer'); setPickup(item.pickup); setDrop(item.drop); }}>
-            <Text style={{ paddingVertical: 6, fontFamily: fonts.semibold, color: item.id === party?.id ? colors.saffronDeep : colors.ink }}>
-              {item.name} · {item.mobile}
-            </Text>
-          </Pressable>
-        ))}
+
+        {/* Dropdown to select specific customer/lead */}
+        <SelectField
+          label={kind === 'Lead' ? 'Select Lead *' : 'Select Customer *'}
+          options={partyOptions.length ? partyOptions : ['No options available']}
+          value={selectedName}
+          onChange={(name) => {
+            const match = visible.find((item) => item.name === name);
+            if (match) {
+              setPartyId(match.id);
+              setPickup(match.pickup);
+              setDrop(match.drop);
+            }
+          }}
+        />
+
         <Field label="Mobile number *" value={party?.mobile ?? ''} onChangeText={() => undefined} editable={false} />
         <Field label="Travel date *" value={travelDate} onChangeText={setTravelDate} placeholder="YYYY-MM-DD" />
         <Field label="Travel time *" value={travelTime} onChangeText={setTravelTime} placeholder="HH:MM" />
@@ -98,7 +112,6 @@ export default function BookingFormScreen() {
           </View>
         ) : null}
         <Field label="Driver / vehicle details" value={driver} onChangeText={setDriver} placeholder="Driver name and vehicle notes" multiline />
-        <Field label="Vehicle number" value={vehicleNumber} onChangeText={setVehicleNumber} placeholder="MH 01 AB 1234" />
         <Field label="Remarks" value={remarks} onChangeText={setRemarks} multiline />
         <Field label="Booking ID" value="Generated on save" onChangeText={() => undefined} editable={false} />
         <Field label="Created by" value={session?.name ?? 'Signed-in user'} onChangeText={() => undefined} editable={false} />

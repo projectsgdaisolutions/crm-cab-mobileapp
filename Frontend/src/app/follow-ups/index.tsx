@@ -2,8 +2,9 @@ import { usePathname, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { CallButton } from '../../components/CallButton';
-import { Card, EmptyState, FilterChips, PageHeader, Pill, Screen } from '../../components/ui';
+import { Card, EmptyState, Field, FilterChips, PageHeader, Pill, Screen } from '../../components/ui';
 import { formatDay, isOverdueFollowUp, ymd } from '../../lib/dates';
+import { matchesOnDate, matchesQuery } from '../../lib/deskFilters';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
 
@@ -14,6 +15,8 @@ export default function FollowUpsScreen() {
   const router = useRouter();
   const path = usePathname();
   const [filter, setFilter] = useState('Today');
+  const [query, setQuery] = useState('');
+  const [onDate, setOnDate] = useState('');
   const today = ymd(new Date());
   const rows = data.followUps.filter((item) => {
     const open = item.status === 'Pending' || item.status === 'Rescheduled';
@@ -22,7 +25,7 @@ export default function FollowUpsScreen() {
     if (filter === 'Today') return item.date === today;
     if (filter === 'Overdue') return isOverdueFollowUp(item.date, item.time, item.status);
     return item.date > today;
-  });
+  }).filter((item) => matchesOnDate(item.date, onDate) && matchesQuery(`${item.entityName} ${item.mobile} ${item.remarks} ${item.type}`, query));
 
   return (
     <Screen>
@@ -30,8 +33,17 @@ export default function FollowUpsScreen() {
         title="Follow-ups"
         subtitle={`${data.followUps.filter((item) => item.date === today && item.status !== 'Completed').length} today · ${data.followUps.filter((item) => isOverdueFollowUp(item.date, item.time, item.status)).length} overdue · ${data.followUps.filter((item) => item.date > today && (item.status === 'Pending' || item.status === 'Rescheduled')).length} upcoming`}
         back={path !== '/followups'}
+        right={
+          <Pressable accessibilityLabel="Schedule follow-up" onPress={() => router.push('/follow-up/new')} style={chip}>
+            <Text style={chipText}>Schedule</Text>
+          </Pressable>
+        }
       />
       <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
+      <View style={{ paddingHorizontal: 20 }}>
+        <Field label="Search" value={query} onChangeText={setQuery} placeholder="Name, phone, or note" />
+        <Field label="Date" value={onDate} onChangeText={setOnDate} placeholder="YYYY-MM-DD, optional" />
+      </View>
       <View style={{ padding: 20, gap: 10 }}>
         {rows.length === 0 ? <EmptyState title={`No ${filter.toLowerCase()} follow-ups`} body="Schedule the next call from a customer or lead so it shows on the desk." /> : null}
         {rows.map((item) => (
@@ -51,8 +63,27 @@ export default function FollowUpsScreen() {
                   <Text style={[chipText, { color: colors.white }]}>Complete</Text>
                 </Pressable>
               ) : null}
-              <Pressable onPress={() => router.push(`/follow-up/new?entityType=${item.entityType}&entityId=${item.entityId}&name=${encodeURIComponent(item.entityName)}&mobile=${encodeURIComponent(item.mobile)}`)} style={chip}>
-                <Text style={chipText}>Reschedule</Text>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/follow-up/new',
+                    params: {
+                      entityType: item.entityType,
+                      entityId: item.entityId,
+                      followType: item.type,
+                      channel: item.channel ?? '',
+                      priority: item.priority ?? '',
+                      assignedTo: item.assignedTo ?? '',
+                      date: item.date,
+                      time: item.time,
+                      remarks: item.remarks,
+                      sourceId: item.id,
+                    },
+                  })
+                }
+                style={chip}
+              >
+                <Text style={chipText}>New schedule</Text>
               </Pressable>
               <Pressable onPress={() => router.push(item.entityType === 'customer' ? `/customer/${item.entityId}` : `/lead/${item.entityId}`)} style={chip}>
                 <Text style={chipText}>Open</Text>

@@ -3,8 +3,10 @@ import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Card, EmptyState, PageHeader, Pill, Screen } from '../../components/ui';
+import { ProgressRing, Waveform } from '../../components/Motion';
+import { Card, EmptyState, Field, FilterChips, PageHeader, Pill, Screen } from '../../components/ui';
 import { formatDuration, formatWhen } from '../../lib/dates';
+import { matchesQuery } from '../../lib/deskFilters';
 import { discoverRecordingFiles } from '../../native/callLog';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
@@ -17,6 +19,8 @@ export default function RecordingsScreen() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [found, setFound] = useState(0);
   const [message, setMessage] = useState('');
+  const [query, setQuery] = useState('');
+  const [availability, setAvailability] = useState('All');
 
   useEffect(() => {
     void discoverRecordingFiles().then((files) => setFound(files.length));
@@ -46,10 +50,17 @@ export default function RecordingsScreen() {
         </Text>
       </Card>
       {message ? <Text style={{ marginHorizontal: 20, color: colors.clay, fontFamily: fonts.medium }}>{message}</Text> : null}
+      <View style={{ paddingHorizontal: 20 }}>
+        <Field label="Search" value={query} onChangeText={setQuery} placeholder="Name, file, or executive" />
+      </View>
+      <FilterChips options={['All', 'available', 'unavailable', 'uploaded', 'failed']} value={availability} onChange={setAvailability} />
       <View style={{ paddingHorizontal: 20, gap: 10 }}>
         {data.recordings.length === 0 ? <EmptyState title="No recordings yet" body="After a call, attach a file from the outcome sheet or upload one here." /> : null}
         {data.recordings.map((item) => {
           const canPlay = Boolean(item.uri || item.remoteUrl || item.previewClip || item.id);
+        {data.recordings.filter((item) => (availability === 'All' || item.availability === availability) && matchesQuery(`${item.name} ${item.fileName} ${item.mobile} ${item.executive ?? ''}`, query)).length === 0 ? <EmptyState title="No recordings yet" body="After a call, attach a file from the outcome sheet or upload one here." /> : null}
+        {data.recordings.filter((item) => (availability === 'All' || item.availability === availability) && matchesQuery(`${item.name} ${item.fileName} ${item.mobile} ${item.executive ?? ''}`, query)).map((item) => {
+          const canPlay = Boolean(item.uri || item.remoteUrl || item.previewClip);
           return (
             <Card key={item.id}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
@@ -77,7 +88,11 @@ export default function RecordingsScreen() {
                   }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, opacity: canPlay ? 1 : 0.4 }}
                 >
-                  <Ionicons name={playingId === item.id ? 'pause' : 'play'} size={18} color={colors.forest} />
+                  <View style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
+                    <ProgressRing active={playingId === item.id} />
+                    <Ionicons name={playingId === item.id ? 'pause' : 'play'} size={16} color={colors.forest} />
+                  </View>
+                  {playingId === item.id ? <Waveform active /> : null}
                   <Text style={{ fontFamily: fonts.bold, color: colors.forest }}>{item.previewClip && !item.uri ? 'Play sample' : 'Play'}</Text>
                 </Pressable>
               </View>

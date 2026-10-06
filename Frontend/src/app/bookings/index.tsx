@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Card, EmptyState, FilterChips, PageHeader, Pill, Screen } from '../../components/ui';
+import { Card, EmptyState, Field, FilterChips, PageHeader, Pill, Screen } from '../../components/ui';
 import { formatDay, inr } from '../../lib/dates';
+import { matchesOnDate, matchesQuery } from '../../lib/deskFilters';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
 import { BOOKING_STATUSES } from '../../types';
@@ -11,7 +12,9 @@ export default function BookingsScreen() {
   const { data } = useStore();
   const router = useRouter();
   const [filter, setFilter] = useState('All');
-  const rows = data.bookings.filter((item) => filter === 'All' || item.status === filter);
+  const [query, setQuery] = useState('');
+  const [onDate, setOnDate] = useState('');
+  const rows = data.bookings.filter((item) => (filter === 'All' || item.status === filter) && matchesOnDate(item.travelDate, onDate) && matchesQuery(`${item.customerName} ${item.mobile} ${item.pickup} ${item.drop} ${item.id} ${item.driver ?? ''}`, query));
   return (
     <Screen>
       <PageHeader
@@ -22,6 +25,10 @@ export default function BookingsScreen() {
       />
       <View style={{ height: 12 }} />
       <FilterChips options={['All', ...BOOKING_STATUSES]} value={filter} onChange={setFilter} />
+      <View style={{ paddingHorizontal: 20 }}>
+        <Field label="Search" value={query} onChangeText={setQuery} placeholder="Customer, route, or booking id" />
+        <Field label="Travel date" value={onDate} onChangeText={setOnDate} placeholder="YYYY-MM-DD, optional" />
+      </View>
       <View style={{ padding: 20, gap: 10 }}>
         {rows.length === 0 ? <EmptyState title="No bookings in this status" body="Create a booking from a confirmed lead or an existing customer." actionLabel="New booking" onAction={() => router.push('/booking/new')} /> : null}
         {rows.map((item) => (

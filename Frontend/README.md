@@ -75,6 +75,17 @@ If the API is down, changes stay on the phone and are marked “On device”.
 - Call log sync needs `READ_CALL_LOG` and `READ_PHONE_STATE`. The executive confirms which rows to import. Unknown numbers can become new leads.
 - Recording upload uses a file the user picks, or files found in common dialer folders on a development build. Availability depends on the Android version and the phone maker. Missed calls often have no file.
 
+## Added on this desk
+
+These stay on the phone. Nothing new is sent to a backend.
+
+- Notifications bell on Home, plus a Notifications screen. Items come from follow-ups due, new leads, open bookings, and missed calls. Profile toggles still decide which of those appear. The report section from the web admin desk is not included.
+- Follow-ups has a Schedule action that opens a new schedule. New schedule on an existing row copies the person, type, channel, priority, assignee, date, time, and note, then marks the previous row Rescheduled.
+- Changing Type on the schedule form sets Channel to the matching value (Call → Phone, Message → WhatsApp, Visit → Visit, Booking → Phone). Switching Customer / Lead replaces the person dropdown with that list.
+- Saving a schedule for a lead writes the same date and time into that lead’s next follow-up fields.
+- Drivers, Vehicles, Account security, This device, and Access are phone-only screens. They use the same cards and fields as the rest of the desk. Reports are still not included.
+- Calls and Profile fade in. The call icon pulses. Search, a date field, and task counts were added on the lists that were missing them.
+
 ## Checks
 
 ```bash

@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import { BadgePop } from '../../components/Motion';
 import { useStore } from '../../state/store';
 import { colors, fonts } from '../../theme';
 
-function TabIcon({ focused, name }: { focused: boolean; name: keyof typeof Ionicons.glyphMap }) {
+function TabIcon({ focused, name, badge = 0 }: { focused: boolean; name: keyof typeof Ionicons.glyphMap; badge?: number }) {
   const outline = `${name}-outline` as keyof typeof Ionicons.glyphMap;
   return (
     <View style={{ width: 46, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? colors.mint : 'transparent' }}>
       <Ionicons name={focused ? name : outline} size={20} color={focused ? colors.ink : '#8E93A3'} />
+      <BadgePop count={badge} />
     </View>
   );
 }
@@ -16,6 +18,9 @@ function TabIcon({ focused, name }: { focused: boolean; name: keyof typeof Ionic
 export default function MainLayout() {
   const { ready, session, csrfToken, awaitingReturn, openDisposition } = useStore();
   if (ready && (!session || !csrfToken || csrfToken === 'demo')) return <Redirect href="/(auth)/login" />;
+  const { ready, session, awaitingReturn, openDisposition, data } = useStore();
+  const missed = data.calls.filter((call) => call.status === 'Missed').length;
+  if (ready && !session) return <Redirect href="/(auth)/login" />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       {awaitingReturn ? (
@@ -44,7 +49,7 @@ export default function MainLayout() {
         <Tabs.Screen name="customers" options={{ title: 'Customers', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="people" /> }} />
         <Tabs.Screen name="leads" options={{ title: 'Leads', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="clipboard" /> }} />
         <Tabs.Screen name="followups" options={{ title: 'Follow-ups', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="calendar" /> }} />
-        <Tabs.Screen name="calls" options={{ title: 'Calls', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="call" /> }} />
+        <Tabs.Screen name="calls" options={{ title: 'Calls', tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="call" badge={missed} /> }} />
         <Tabs.Screen name="more" options={{ href: null }} />
       </Tabs>
     </View>

@@ -25,7 +25,6 @@ export default function LeadFormScreen() {
   const [requirement, setRequirement] = useState(existing?.requirement && requirementOptions.includes(existing.requirement) ? existing.requirement : requirementOptions[0]);
   const [pickup, setPickup] = useState(existing?.pickup ?? '');
   const [drop, setDrop] = useState(existing?.drop ?? '');
-  const [location, setLocation] = useState(existing?.location ?? '');
   const [travelDate, setTravelDate] = useState(existing?.travelDate ?? ymd(new Date()));
   const [travelTime, setTravelTime] = useState(existing?.travelTime ?? '10:00');
   const [source, setSource] = useState(existing?.source ?? 'Website');
@@ -52,6 +51,7 @@ export default function LeadFormScreen() {
         <Field label="Travel time *" value={travelTime} onChangeText={setTravelTime} placeholder="HH:MM" />
         <Field label="Location" value={location} onChangeText={setLocation} placeholder="City or area" />
         <ChoiceRow label="Source *" options={mode === 'api' ? [...API_LEAD_SOURCES] : [...LEAD_SOURCES]} value={source} onChange={setSource} />
+        <ChoiceRow label="Source *" options={LEAD_SOURCES} value={source} onChange={setSource} />
         <ChoiceRow label="Priority *" options={PRIORITIES} value={priority} onChange={setPriority} />
         <ChoiceRow label="Assigned executive *" options={assigneeOptions} value={assignedTo} onChange={setAssignedTo} />
         <ChoiceRow label="Status" options={LEAD_STATUSES} value={status} onChange={setStatus} />
@@ -97,7 +97,6 @@ export default function LeadFormScreen() {
               requirement,
               pickup: pickup.trim(),
               drop: drop.trim(),
-              location: location.trim() || undefined,
               travelDate,
               travelTime,
               source,
