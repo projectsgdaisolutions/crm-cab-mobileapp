@@ -5,10 +5,11 @@ import { Card, ChoiceRow, Muted, PageHeader, Pill, Screen } from '../../componen
 import { formatDay } from '../../lib/dates';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { LEAD_STATUSES, type LeadStatus } from '../../types';
 
 export default function LeadDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, saveLead } = useStore();
   const router = useRouter();

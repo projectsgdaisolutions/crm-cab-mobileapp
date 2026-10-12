@@ -3,11 +3,12 @@ import { Platform, Text, View } from 'react-native';
 import { Button, ChoiceRow, Field, PageHeader, Screen } from '../../components/ui';
 import { ymd } from '../../lib/dates';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 const RESOURCES = ['customers', 'leads', 'followups', 'bookings', 'calls', 'tasks'];
 
 export default function ReportExportScreen() {
+  const colors = useColors();
   const { exportReport } = useStore();
   const [resource, setResource] = useState('calls');
   const [dateFrom, setDateFrom] = useState(ymd(new Date(Date.now() - 30 * 86400000)));

@@ -3,9 +3,10 @@ import { Text, View } from 'react-native';
 import { Card, PageHeader, Screen } from '../../components/ui';
 import { formatWhen } from '../../lib/dates';
 import { loadDeviceRegistration, type DeviceRegistration } from '../../lib/localAccount';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 export default function DeviceScreen() {
+  const colors = useColors();
   const [device, setDevice] = useState<DeviceRegistration | null>(null);
 
   useEffect(() => {

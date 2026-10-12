@@ -8,10 +8,12 @@ import { EmptyState, FilterChips, Pill, SearchField } from '../../components/ui'
 import { formatWhen, inr } from '../../lib/dates';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors, useThemedStyles, type ColorTokens } from '../../theme';
 import { CUSTOMER_STATUSES } from '../../types';
 
 export default function CustomersScreen() {
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { data } = useStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -66,13 +68,15 @@ export default function CustomersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  title: { color: colors.ink, fontFamily: fonts.display, fontSize: 32 },
-  sub: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
-  add: { height: 36, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  addText: { color: colors.saffron, fontFamily: fonts.bold },
-  card: { backgroundColor: colors.paper, borderRadius: 22, padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' },
-  name: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
-  meta: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
-  route: { color: colors.ink, fontFamily: fonts.regular, marginTop: 2 },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    title: { color: colors.ink, fontFamily: fonts.display, fontSize: 32 },
+    sub: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
+    add: { height: 36, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+    addText: { color: colors.saffron, fontFamily: fonts.bold },
+    card: { backgroundColor: colors.paper, borderRadius: 22, padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' },
+    name: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
+    meta: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
+    route: { color: colors.ink, fontFamily: fonts.regular, marginTop: 2 },
+  });
+}

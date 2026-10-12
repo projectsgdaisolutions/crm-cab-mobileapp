@@ -4,9 +4,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Field } from '../../components/ui';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors, useThemedStyles, type ColorTokens } from '../../theme';
 
 export default function ForgotPasswordScreen() {
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { forgotPassword } = useStore();
@@ -40,12 +42,14 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream, paddingHorizontal: 22 },
-  back: { color: colors.saffron, fontFamily: fonts.semibold, marginBottom: 18 },
-  word: { color: colors.ink, fontFamily: fonts.display, fontSize: 40 },
-  lede: { color: colors.muted, fontFamily: fonts.medium, lineHeight: 22, marginVertical: 12 },
-  card: { backgroundColor: colors.paper, borderRadius: 22, padding: 16 },
-  error: { color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 },
-  message: { color: colors.forest, fontFamily: fonts.medium, lineHeight: 20, marginBottom: 12 },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.cream, paddingHorizontal: 22 },
+    back: { color: colors.saffron, fontFamily: fonts.semibold, marginBottom: 18 },
+    word: { color: colors.ink, fontFamily: fonts.display, fontSize: 40 },
+    lede: { color: colors.muted, fontFamily: fonts.medium, lineHeight: 22, marginVertical: 12 },
+    card: { backgroundColor: colors.paper, borderRadius: 22, padding: 16 },
+    error: { color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 },
+    message: { color: colors.forest, fontFamily: fonts.medium, lineHeight: 20, marginBottom: 12 },
+  });
+}

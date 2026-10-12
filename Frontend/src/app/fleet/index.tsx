@@ -4,10 +4,11 @@ import { Pressable, Text, View } from 'react-native';
 import { Button, Card, ChoiceRow, Field, PageHeader, Pill, Screen } from '../../components/ui';
 import { makeId } from '../../lib/ids';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { VEHICLE_TYPES, type Driver, type Vehicle } from '../../types';
 
 export default function FleetScreen() {
+  const colors = useColors();
   const { data, saveDriver, saveVehicle, session, ready, mode } = useStore();
   const canEdit = session?.role === 'admin';
   const [tab, setTab] = useState<'Drivers' | 'Vehicles'>('Drivers');

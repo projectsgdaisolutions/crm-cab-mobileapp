@@ -3,9 +3,11 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { Pulse } from './Motion';
 import { openNativeDialer } from '../native/dialer';
 import { useStore, type CallTarget } from '../state/store';
-import { colors, fonts } from '../theme';
+import { fonts, useColors, useThemedStyles, type ColorTokens } from '../theme';
 
 export function CallButton({ target, compact = false }: { target: CallTarget; compact?: boolean }) {
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { beginCall } = useStore();
   return (
     <Pressable
@@ -26,24 +28,26 @@ export function CallButton({ target, compact = false }: { target: CallTarget; co
   );
 }
 
-const styles = StyleSheet.create({
-  btn: {
-    backgroundColor: colors.saffron,
-    borderRadius: 14,
-    height: 46,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  compact: {
-    width: 40,
-    height: 40,
-    paddingHorizontal: 0,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
-  },
-  pressed: { opacity: 0.55 },
-  label: { color: colors.white, fontFamily: fonts.bold, fontSize: 15 },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    btn: {
+      backgroundColor: colors.saffron,
+      borderRadius: 14,
+      height: 46,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    compact: {
+      width: 40,
+      height: 40,
+      paddingHorizontal: 0,
+      borderRadius: 20,
+      backgroundColor: 'transparent',
+    },
+    pressed: { opacity: 0.55 },
+    label: { color: colors.white, fontFamily: fonts.bold, fontSize: 15 },
+  });
+}

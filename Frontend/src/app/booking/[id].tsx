@@ -1,16 +1,15 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Card, ChoiceRow, Muted, PageHeader, Screen } from '../../components/ui';
-import { Text, View } from 'react-native';
 import { Card, ChoiceRow, Muted, PageHeader, Screen, SelectField } from '../../components/ui';
 import { formatDay, inr } from '../../lib/dates';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { BOOKING_STATUSES, PAYMENT_STATUSES, type BookingStatus, type PaymentStatus } from '../../types';
 
 export default function BookingDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, saveBooking, assignBookingDriver } = useStore();
   const [driverId, setDriverId] = useState('');
@@ -71,13 +70,13 @@ export default function BookingDetailScreen() {
         ) : null}
         <SelectField
           label="Driver / captain"
-          options={['Unassigned', ...data.drivers.filter((driver) => driver.status === 'Active').map((driver) => driver.name)]}
+          options={['Unassigned', ...data.drivers.filter((driver) => driver.status === 'active').map((driver) => driver.name)]}
           value={booking.driver || 'Unassigned'}
           onChange={(name) => void saveBooking({ ...booking, driver: name === 'Unassigned' ? undefined : name }, false)}
         />
         <SelectField
           label="Vehicle number"
-          options={['Unassigned', ...data.vehicles.filter((vehicle) => vehicle.status === 'Active').map((vehicle) => vehicle.number)]}
+          options={['Unassigned', ...data.vehicles.filter((vehicle) => vehicle.status === 'active').map((vehicle) => vehicle.registrationNumber)]}
           value={booking.vehicleNumber || 'Unassigned'}
           onChange={(number) => void saveBooking({ ...booking, vehicleNumber: number === 'Unassigned' ? undefined : number }, false)}
         />

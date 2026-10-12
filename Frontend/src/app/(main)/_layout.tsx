@@ -3,24 +3,24 @@ import { Redirect, Tabs } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { BadgePop } from '../../components/Motion';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 function TabIcon({ focused, name, badge = 0 }: { focused: boolean; name: keyof typeof Ionicons.glyphMap; badge?: number }) {
+  const colors = useColors();
   const outline = `${name}-outline` as keyof typeof Ionicons.glyphMap;
   return (
     <View style={{ width: 46, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? colors.mint : 'transparent' }}>
-      <Ionicons name={focused ? name : outline} size={20} color={focused ? colors.ink : '#8E93A3'} />
+      <Ionicons name={focused ? name : outline} size={20} color={focused ? colors.ink : colors.tabInactive} />
       <BadgePop count={badge} />
     </View>
   );
 }
 
 export default function MainLayout() {
-  const { ready, session, csrfToken, awaitingReturn, openDisposition } = useStore();
-  if (ready && (!session || !csrfToken || csrfToken === 'demo')) return <Redirect href="/(auth)/login" />;
-  const { ready, session, awaitingReturn, openDisposition, data } = useStore();
+  const colors = useColors();
+  const { ready, session, csrfToken, awaitingReturn, openDisposition, data } = useStore();
   const missed = data.calls.filter((call) => call.status === 'Missed').length;
-  if (ready && !session) return <Redirect href="/(auth)/login" />;
+  if (ready && (!session || !csrfToken || csrfToken === 'demo')) return <Redirect href="/(auth)/login" />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       {awaitingReturn ? (
@@ -34,10 +34,10 @@ export default function MainLayout() {
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.ink,
-          tabBarInactiveTintColor: '#8E93A3',
+          tabBarInactiveTintColor: colors.tabInactive,
           tabBarStyle: {
             backgroundColor: colors.paper,
-            borderTopColor: '#EEF0F5',
+            borderTopColor: colors.line,
             height: 68,
             paddingTop: 6,
             paddingBottom: 8,

@@ -17,7 +17,7 @@ import {
   type ScheduleParty,
 } from '../../lib/scheduleSync';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import {
   FOLLOW_UP_CHANNELS,
   FOLLOW_UP_PRIORITIES,
@@ -30,6 +30,7 @@ import {
 } from '../../types';
 
 export default function FollowUpFormScreen() {
+  const colors = useColors();
   const params = useLocalSearchParams<{
     entityType?: string;
     entityId?: string;

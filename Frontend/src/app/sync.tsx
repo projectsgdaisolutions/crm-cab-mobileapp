@@ -7,7 +7,7 @@ import { formatPhone } from '../lib/phone';
 import { matchDeviceCalls, type DeviceCall, type MatchedDeviceCall } from '../lib/syncCalls';
 import { inspectCallLogAccess, readDeviceCallLog, requestCallLogAccess, type CallLogAccess } from '../native/callLog';
 import { useStore } from '../state/store';
-import { colors, fonts } from '../theme';
+import { fonts, useColors } from '../theme';
 
 function previewLog(now = Date.now()): DeviceCall[] {
   return [
@@ -19,6 +19,7 @@ function previewLog(now = Date.now()): DeviceCall[] {
 }
 
 export default function SyncScreen() {
+  const colors = useColors();
   const { data, importDeviceCalls } = useStore();
   const [access, setAccess] = useState<CallLogAccess | null>(null);
   const [rows, setRows] = useState<MatchedDeviceCall[]>([]);

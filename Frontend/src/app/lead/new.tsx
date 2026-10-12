@@ -6,10 +6,11 @@ import { ymd } from '../../lib/dates';
 import { makeId } from '../../lib/ids';
 import { isPlausibleMobile } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { API_LEAD_SOURCES, CAB_REQUIREMENTS, LEAD_SOURCES, LEAD_STATUSES, PRIORITIES, type Lead, type LeadStatus, type Priority } from '../../types';
 
 export default function LeadFormScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { data, saveLead, session, mode } = useStore();
   const existing = data.leads.find((item) => item.id === id);
@@ -35,6 +36,7 @@ export default function LeadFormScreen() {
   const [nextDate, setNextDate] = useState(existing?.nextFollowUpDate ?? '');
   const [nextTime, setNextTime] = useState(existing?.nextFollowUpTime ?? '');
   const [remarks, setRemarks] = useState(existing?.remarks ?? '');
+  const [location, setLocation] = useState(existing?.location ?? existing?.pickup ?? '');
   const [error, setError] = useState('');
 
   return (
@@ -51,7 +53,6 @@ export default function LeadFormScreen() {
         <Field label="Travel time *" value={travelTime} onChangeText={setTravelTime} placeholder="HH:MM" />
         <Field label="Location" value={location} onChangeText={setLocation} placeholder="City or area" />
         <ChoiceRow label="Source *" options={mode === 'api' ? [...API_LEAD_SOURCES] : [...LEAD_SOURCES]} value={source} onChange={setSource} />
-        <ChoiceRow label="Source *" options={LEAD_SOURCES} value={source} onChange={setSource} />
         <ChoiceRow label="Priority *" options={PRIORITIES} value={priority} onChange={setPriority} />
         <ChoiceRow label="Assigned executive *" options={assigneeOptions} value={assignedTo} onChange={setAssignedTo} />
         <ChoiceRow label="Status" options={LEAD_STATUSES} value={status} onChange={setStatus} />
@@ -107,12 +108,17 @@ export default function LeadFormScreen() {
               nextFollowUpDate: nextDate || undefined,
               nextFollowUpTime: nextTime || undefined,
               remarks: remarks.trim() || undefined,
+              location: location.trim() || pickup.trim(),
               createdAt: existing?.createdAt ?? now,
               updatedAt: now,
               syncState: 'local',
             };
-            const saved = await saveLead(row, !existing);
-            router.replace(`/lead/${saved.id}`);
+            try {
+              const saved = await saveLead(row, !existing);
+              router.replace(`/lead/${saved.id}`);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Could not save the lead.');
+            }
           }}
         />
       </View>

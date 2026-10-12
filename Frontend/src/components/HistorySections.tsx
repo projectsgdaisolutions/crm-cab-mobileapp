@@ -4,7 +4,7 @@ import { formatDay, formatDuration, formatWhen, inr, isOverdueFollowUp } from '.
 import { formatPhone } from '../lib/phone';
 import { useStore } from '../state/store';
 import type { EntityType } from '../types';
-import { colors, fonts } from '../theme';
+import { fonts, useColors, useThemedStyles, type ColorTokens } from '../theme';
 import { CallButton } from './CallButton';
 import { Card, Muted, Pill, SectionLabel } from './ui';
 
@@ -19,6 +19,8 @@ export function HistorySections({
   name: string;
   mobile: string;
 }) {
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { data } = useStore();
   const router = useRouter();
   const notes = data.notes.filter((item) => item.entityType === entityType && item.entityId === entityId);
@@ -101,23 +103,25 @@ export function HistorySections({
   );
 }
 
-const styles = StyleSheet.create({
-  actions: { flexDirection: 'row', gap: 8, marginHorizontal: 20, marginTop: 16, alignItems: 'center' },
-  action: {
-    height: 46,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionText: { color: colors.forest, fontFamily: fonts.bold, fontSize: 13 },
-  card: { marginHorizontal: 20, marginBottom: 10 },
-  empty: { marginHorizontal: 20, marginBottom: 8 },
-  line: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 4 },
-  strong: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 15, flex: 1 },
-  body: { color: colors.ink, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
-  activity: { marginHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.line },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    actions: { flexDirection: 'row', gap: 8, marginHorizontal: 20, marginTop: 16, alignItems: 'center' },
+    action: {
+      height: 46,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.line,
+      backgroundColor: colors.paper,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionText: { color: colors.forest, fontFamily: fonts.bold, fontSize: 13 },
+    card: { marginHorizontal: 20, marginBottom: 10 },
+    empty: { marginHorizontal: 20, marginBottom: 8 },
+    line: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 4 },
+    strong: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 15, flex: 1 },
+    body: { color: colors.ink, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+    activity: { marginHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.line },
+  });
+}

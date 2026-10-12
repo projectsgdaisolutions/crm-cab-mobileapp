@@ -5,10 +5,11 @@ import { Button, ChoiceRow, Field, PageHeader, Screen, SelectField } from '../..
 import { makeId } from '../../lib/ids';
 import { isPlausibleMobile } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { CUSTOMER_STATUSES, type Customer, type CustomerStatus } from '../../types';
 
 export default function CustomerFormScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { data, saveCustomer, session } = useStore();
   const existing = data.customers.find((item) => item.id === id);
@@ -77,8 +78,12 @@ export default function CustomerFormScreen() {
               updatedAt: now,
               syncState: 'local',
             };
-            const saved = await saveCustomer(row, !existing);
-            router.replace(`/customer/${saved.id}`);
+            try {
+              const saved = await saveCustomer(row, !existing);
+              router.replace(`/customer/${saved.id}`);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Could not save the customer.');
+            }
           }}
         />
       </View>

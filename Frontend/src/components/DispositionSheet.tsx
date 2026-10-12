@@ -5,10 +5,12 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatPhone } from '../lib/phone';
 import { useStore } from '../state/store';
 import { CALL_STATUSES, type CallStatus } from '../types';
-import { colors, fonts } from '../theme';
+import { fonts, useColors, useThemedStyles, type ColorTokens } from '../theme';
 import { Button, ChoiceRow, Field, Muted } from './ui';
 
 export function DispositionSheet() {
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { pendingCall, dismissDisposition, saveDisposition } = useStore();
   const [status, setStatus] = useState<CallStatus>('Answered');
   const [minutes, setMinutes] = useState('2');
@@ -84,31 +86,33 @@ export function DispositionSheet() {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(14,36,32,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.cream,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '92%',
-  },
-  handle: { alignSelf: 'center', width: 42, height: 4, borderRadius: 4, backgroundColor: colors.line, marginBottom: 12 },
-  kicker: { color: colors.saffronDeep, fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
-  title: { color: colors.ink, fontFamily: fonts.display, fontSize: 28, marginTop: 4 },
-  help: { color: colors.muted, fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, marginVertical: 10 },
-  file: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.paper,
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  fileText: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 14 },
-  error: { color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 },
-  skip: { color: colors.muted, fontFamily: fonts.semibold },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: colors.cream,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      maxHeight: '92%',
+    },
+    handle: { alignSelf: 'center', width: 42, height: 4, borderRadius: 4, backgroundColor: colors.line, marginBottom: 12 },
+    kicker: { color: colors.saffronDeep, fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
+    title: { color: colors.ink, fontFamily: fonts.display, fontSize: 28, marginTop: 4 },
+    help: { color: colors.muted, fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, marginVertical: 10 },
+    file: {
+      borderWidth: 1,
+      borderColor: colors.line,
+      backgroundColor: colors.paper,
+      borderRadius: 14,
+      padding: 12,
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    fileText: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 14 },
+    error: { color: colors.clay, fontFamily: fonts.medium, marginBottom: 8 },
+    skip: { color: colors.muted, fontFamily: fonts.semibold },
+  });
+}

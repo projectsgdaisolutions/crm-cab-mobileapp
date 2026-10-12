@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { Button } from '../components/ui';
-import { colors, fonts } from '../theme';
+import { fonts, useColors } from '../theme';
 
 export default function NotFound() {
+  const colors = useColors();
   const router = useRouter();
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream, padding: 24, justifyContent: 'center' }}>
