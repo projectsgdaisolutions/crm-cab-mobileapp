@@ -7,6 +7,7 @@ const DATA_KEY = 'cabcrm.desk.v1';
 const SESSION_KEY = 'cabcrm.session.v1';
 const API_KEY = 'cabcrm.apiBase.v1';
 const DEVICE_KEY = 'cabcrm.deviceToken.v1';
+const THEME_KEY = 'cabcrm.theme.v1';
 
 export async function loadDesk(): Promise<AppData | null> {
   const raw = await AsyncStorage.getItem(DATA_KEY);
@@ -64,6 +65,16 @@ export async function loadDeviceToken(): Promise<string | null> {
 
 export async function saveDeviceToken(value: string): Promise<void> {
   await AsyncStorage.setItem(DEVICE_KEY, value);
+}
+
+export async function loadThemePreference(): Promise<'light' | 'dark' | 'system' | null> {
+  const raw = await AsyncStorage.getItem(THEME_KEY);
+  if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+  return null;
+}
+
+export async function saveThemePreference(value: 'light' | 'dark' | 'system'): Promise<void> {
+  await AsyncStorage.setItem(THEME_KEY, value);
 }
 
 export async function saveSession(session: StoredSession | null): Promise<void> {

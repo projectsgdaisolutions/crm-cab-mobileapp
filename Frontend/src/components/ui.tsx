@@ -15,14 +15,20 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, toneFor } from '../theme';
+import { fonts, toneFor, useColors, useThemedStyles, type ColorTokens } from '../theme';
+
+function useUi() {
+  const colors = useColors();
+  const styles = useThemedStyles(makeUiStyles);
+  return { colors, styles };
+}
 
 export function Screen({
   children,
   scroll = true,
   footer,
   overlay,
-  tint = colors.cream,
+  tint,
 }: {
   children: ReactNode;
   scroll?: boolean;
@@ -30,6 +36,7 @@ export function Screen({
   overlay?: ReactNode;
   tint?: string;
 }) {
+  const { colors, styles } = useUi();
   const insets = useSafeAreaInsets();
   const body = scroll ? (
     <ScrollView
@@ -43,7 +50,7 @@ export function Screen({
     <View style={{ flex: 1 }}>{children}</View>
   );
   return (
-    <View style={{ flex: 1, backgroundColor: tint }}>
+    <View style={{ flex: 1, backgroundColor: tint ?? colors.cream }}>
       {body}
       {footer ? <View style={{ paddingBottom: Math.max(insets.bottom, 10), backgroundColor: colors.paper }}>{footer}</View> : null}
       {overlay}
@@ -64,6 +71,7 @@ export function PageHeader({
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors, styles } = useUi();
   return (
     <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
       <View style={styles.headerRow}>
@@ -90,19 +98,23 @@ export function PageHeader({
 }
 
 export function Title({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
+  const { styles } = useUi();
   return <Text style={[styles.title, style]}>{children}</Text>;
 }
 
 export function Body({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  const { styles } = useUi();
   return <Text style={[styles.body, style]}>{children}</Text>;
 }
 
 export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  const { styles } = useUi();
   return <Text style={[styles.muted, style]}>{children}</Text>;
 }
 
 export function Pill({ label }: { label: string }) {
-  const tone = toneFor(label);
+  const { colors, styles } = useUi();
+  const tone = toneFor(label, colors);
   return (
     <View style={[styles.pill, { backgroundColor: tone.bg }]}>
       <Text style={[styles.pillText, { color: tone.fg }]}>{label}</Text>
@@ -111,6 +123,7 @@ export function Pill({ label }: { label: string }) {
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const { styles } = useUi();
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
@@ -135,6 +148,7 @@ export function Field({
   error?: string;
   editable?: boolean;
 }) {
+  const { colors, styles } = useUi();
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={styles.label}>{label}</Text>
@@ -148,7 +162,7 @@ export function Field({
         multiline={multiline}
         editable={editable}
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
-        style={[styles.input, multiline && { minHeight: 96, textAlignVertical: 'top' }, !editable && { backgroundColor: '#F3F5FA', color: colors.ink }, error && { borderColor: colors.clay }]}
+        style={[styles.input, multiline && { minHeight: 96, textAlignVertical: 'top' }, !editable && { backgroundColor: colors.inputDisabled, color: colors.ink }, error && { borderColor: colors.clay }]}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
@@ -166,6 +180,7 @@ export function ChoiceRow<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const { styles } = useUi();
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={styles.label}>{label}</Text>
@@ -200,6 +215,7 @@ export function SelectField<T extends string>({
   onChange: (value: T) => void;
   error?: string;
 }) {
+  const { colors, styles } = useUi();
   const [open, setOpen] = useState(false);
   return (
     <View style={{ marginBottom: 14, zIndex: open ? 20 : 1 }}>
@@ -221,7 +237,7 @@ export function SelectField<T extends string>({
             borderRadius: 14,
             borderWidth: 1,
             borderColor: colors.line,
-            shadowColor: '#1B2340',
+            shadowColor: colors.shadow,
             shadowOpacity: 0.1,
             shadowRadius: 10,
             shadowOffset: { width: 0, height: 4 },
@@ -242,7 +258,7 @@ export function SelectField<T extends string>({
                   {
                     paddingHorizontal: 16,
                     paddingVertical: 12,
-                    backgroundColor: opt === value ? '#E7EFEA' : pressed ? '#F5F5F5' : colors.paper,
+                    backgroundColor: opt === value ? colors.selectActive : pressed ? colors.selectHover : colors.paper,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -276,6 +292,7 @@ export function Button({
   disabled?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
 }) {
+  const { colors, styles } = useUi();
   const [busy, setBusy] = useState(false);
   return (
     <Pressable
@@ -292,7 +309,7 @@ export function Button({
       style={({ pressed }) => [
         styles.button,
         tone === 'saffron' && { backgroundColor: colors.saffron },
-        tone === 'forest' && { backgroundColor: colors.forest },
+        tone === 'forest' && { backgroundColor: colors.forestFill },
         tone === 'ghost' && { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.line },
         pressed && { opacity: 0.82 },
         (disabled || busy) && { opacity: 0.55 },
@@ -306,6 +323,7 @@ export function Button({
 }
 
 export function EmptyState({ title, body, actionLabel, onAction }: { title: string; body: string; actionLabel?: string; onAction?: () => void }) {
+  const { styles } = useUi();
   return (
     <Card style={{ margin: 20, alignItems: 'flex-start' }}>
       <Text style={styles.title}>{title}</Text>
@@ -320,6 +338,7 @@ export function EmptyState({ title, body, actionLabel, onAction }: { title: stri
 }
 
 export function SearchField({ value, onChangeText, placeholder }: { value: string; onChangeText: (value: string) => void; placeholder: string }) {
+  const { colors, styles } = useUi();
   return (
     <View style={styles.search}>
       <Ionicons name="search" size={18} color={colors.faint} />
@@ -335,6 +354,7 @@ export function SearchField({ value, onChangeText, placeholder }: { value: strin
 }
 
 export function FilterChips({ options, value, onChange }: { options: string[]; value: string; onChange: (value: string) => void }) {
+  const { colors, styles } = useUi();
   const [frames, setFrames] = useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
   const left = useRef(new Animated.Value(0)).current;
   const pillWidth = useRef(new Animated.Value(0)).current;
@@ -369,7 +389,7 @@ export function FilterChips({ options, value, onChange }: { options: string[]; v
               width: pillWidth,
               height: frame.height,
               borderRadius: 999,
-              backgroundColor: '#D6F5E8',
+              backgroundColor: colors.filterOn,
               borderWidth: 1.5,
               borderColor: colors.moss,
             }}
@@ -407,6 +427,7 @@ export function FilterChips({ options, value, onChange }: { options: string[]; v
 }
 
 export function Notice({ message, onClose }: { message: string; onClose: () => void }) {
+  const { colors, styles } = useUi();
   return (
     <Pressable onPress={onClose} style={styles.notice}>
       <Ionicons name="information-circle" size={18} color={colors.forest} />
@@ -416,6 +437,7 @@ export function Notice({ message, onClose }: { message: string; onClose: () => v
 }
 
 export function SectionLabel({ children }: { children: string }) {
+  const { styles } = useUi();
   return <Text style={styles.section}>{children}</Text>;
 }
 
@@ -430,6 +452,7 @@ export function RowLink({
   detail: string;
   onPress: () => void;
 }) {
+  const { colors, styles } = useUi();
   return (
     <Pressable onPress={onPress} style={styles.rowLink}>
       <View style={styles.rowIcon}>
@@ -444,168 +467,170 @@ export function RowLink({
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    backgroundColor: colors.cream,
-    paddingHorizontal: 20,
-    paddingBottom: 6,
-  },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.paper,
-  },
-  kicker: {
-    color: colors.muted,
-    fontFamily: fonts.semibold,
-    fontSize: 11,
-  },
-  headerTitle: {
-    color: colors.ink,
-    fontFamily: fonts.display,
-    fontSize: 32,
-  },
-  headerSub: { color: colors.muted, fontFamily: fonts.medium, fontSize: 14, marginTop: 2 },
-  title: { color: colors.ink, fontFamily: fonts.displaySoft, fontSize: 22 },
-  body: { color: colors.ink, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
-  muted: { color: colors.muted, fontFamily: fonts.medium, fontSize: 13, lineHeight: 18 },
-  label: { color: colors.muted, fontFamily: fonts.semibold, fontSize: 12, marginBottom: 6, letterSpacing: 0.3 },
-  input: {
-    backgroundColor: colors.paper,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.ink,
-    fontFamily: fonts.medium,
-    fontSize: 16,
-  },
-  error: { color: colors.clay, fontFamily: fonts.medium, fontSize: 12, marginTop: 4 },
-  pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
-  pillText: { fontFamily: fonts.semibold, fontSize: 12 },
-  card: {
-    backgroundColor: colors.paper,
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 0,
-    shadowColor: '#1B2340',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
-  },
-  button: {
-    minHeight: 50,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  buttonText: { color: colors.white, fontFamily: fonts.bold, fontSize: 16 },
-  search: {
-    marginHorizontal: 20,
-    marginTop: 14,
-    marginBottom: 10,
-    backgroundColor: colors.paper,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ECEEF5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  searchInput: { flex: 1, height: 46, color: colors.ink, fontFamily: fonts.medium, fontSize: 15 },
-  filterBar: {
-    height: 52,
-    flexShrink: 0,
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  filterScroll: {
-    flexGrow: 0,
-    height: 44,
-  },
-  filterContent: {
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    gap: 8,
-  },
-  filter: {
-    height: 40,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    backgroundColor: colors.paper,
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  filterOn: { backgroundColor: '#D6F5E8', borderColor: colors.moss },
-  filterText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted, includeFontPadding: false },
-  filterTextOn: { color: colors.moss },
-  choiceWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  choice: {
-    height: 36,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    backgroundColor: colors.paper,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  choiceOn: { backgroundColor: colors.mint, borderColor: colors.mint },
-  choiceText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
-  choiceTextOn: { color: colors.ink },
-  notice: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    backgroundColor: colors.goldWash,
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
-  },
-  noticeText: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 13, lineHeight: 18 },
-  section: {
-    marginTop: 22,
-    marginBottom: 8,
-    marginHorizontal: 20,
-    color: colors.muted,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  rowLink: {
-    marginHorizontal: 20,
-    marginBottom: 10,
-    backgroundColor: colors.paper,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#E7EFEA',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 16 },
-});
+function makeUiStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    header: {
+      backgroundColor: colors.cream,
+      paddingHorizontal: 20,
+      paddingBottom: 6,
+    },
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    iconBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.paper,
+    },
+    kicker: {
+      color: colors.muted,
+      fontFamily: fonts.semibold,
+      fontSize: 11,
+    },
+    headerTitle: {
+      color: colors.ink,
+      fontFamily: fonts.display,
+      fontSize: 32,
+    },
+    headerSub: { color: colors.muted, fontFamily: fonts.medium, fontSize: 14, marginTop: 2 },
+    title: { color: colors.ink, fontFamily: fonts.displaySoft, fontSize: 22 },
+    body: { color: colors.ink, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
+    muted: { color: colors.muted, fontFamily: fonts.medium, fontSize: 13, lineHeight: 18 },
+    label: { color: colors.muted, fontFamily: fonts.semibold, fontSize: 12, marginBottom: 6, letterSpacing: 0.3 },
+    input: {
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.line,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      color: colors.ink,
+      fontFamily: fonts.medium,
+      fontSize: 16,
+    },
+    error: { color: colors.clay, fontFamily: fonts.medium, fontSize: 12, marginTop: 4 },
+    pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
+    pillText: { fontFamily: fonts.semibold, fontSize: 12 },
+    card: {
+      backgroundColor: colors.paper,
+      borderRadius: 22,
+      padding: 16,
+      borderWidth: 0,
+      shadowColor: colors.shadow,
+      shadowOpacity: 0.06,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 2,
+    },
+    button: {
+      minHeight: 50,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 16,
+    },
+    buttonText: { color: colors.white, fontFamily: fonts.bold, fontSize: 16 },
+    search: {
+      marginHorizontal: 20,
+      marginTop: 14,
+      marginBottom: 10,
+      backgroundColor: colors.paper,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.searchBorder,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      gap: 8,
+    },
+    searchInput: { flex: 1, height: 46, color: colors.ink, fontFamily: fonts.medium, fontSize: 15 },
+    filterBar: {
+      height: 52,
+      flexShrink: 0,
+      justifyContent: 'center',
+      marginBottom: 6,
+    },
+    filterScroll: {
+      flexGrow: 0,
+      height: 44,
+    },
+    filterContent: {
+      paddingHorizontal: 20,
+      alignItems: 'center',
+      gap: 8,
+    },
+    filter: {
+      height: 40,
+      borderRadius: 999,
+      paddingHorizontal: 16,
+      backgroundColor: colors.paper,
+      borderWidth: 1.5,
+      borderColor: colors.line,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    filterOn: { backgroundColor: colors.filterOn, borderColor: colors.moss },
+    filterText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted, includeFontPadding: false },
+    filterTextOn: { color: colors.moss },
+    choiceWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    choice: {
+      height: 36,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.line,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    choiceOn: { backgroundColor: colors.mint, borderColor: colors.mint },
+    choiceText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
+    choiceTextOn: { color: colors.ink },
+    notice: {
+      marginHorizontal: 20,
+      marginTop: 12,
+      backgroundColor: colors.goldWash,
+      borderRadius: 14,
+      padding: 12,
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'flex-start',
+    },
+    noticeText: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 13, lineHeight: 18 },
+    section: {
+      marginTop: 22,
+      marginBottom: 8,
+      marginHorizontal: 20,
+      color: colors.muted,
+      fontFamily: fonts.semibold,
+      fontSize: 12,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    rowLink: {
+      marginHorizontal: 20,
+      marginBottom: 10,
+      backgroundColor: colors.paper,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.line,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    rowIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: colors.rowIcon,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    rowTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 16 },
+  });
+}

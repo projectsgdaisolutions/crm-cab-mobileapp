@@ -5,10 +5,13 @@ import { ymd } from '../../lib/dates';
 import { matchesOnDate, taskStats } from '../../lib/deskFilters';
 import { makeId } from '../../lib/ids';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { TASK_PRIORITIES, TASK_STATUSES, type TaskItem, type TaskPriority, type TaskStatus } from '../../types';
 
 export default function TasksScreen() {
+  const colors = useColors();
+  const chip = { borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 };
+  const chipText = { fontFamily: fonts.semibold, color: colors.ink };
   const { data, saveTask, session } = useStore();
   const [query, setQuery] = useState('');
   const [onDate, setOnDate] = useState('');
@@ -131,6 +134,3 @@ export default function TasksScreen() {
     </Screen>
   );
 }
-
-const chip = { borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 };
-const chipText = { fontFamily: fonts.semibold, color: colors.ink };

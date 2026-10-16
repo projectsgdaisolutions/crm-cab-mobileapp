@@ -4,10 +4,11 @@ import { HistorySections } from '../../components/HistorySections';
 import { Card, ChoiceRow, Muted, PageHeader, Screen } from '../../components/ui';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { CUSTOMER_STATUSES, type CustomerStatus } from '../../types';
 
 export default function CustomerDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, saveCustomer } = useStore();
   const router = useRouter();

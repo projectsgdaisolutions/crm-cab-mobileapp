@@ -10,7 +10,7 @@ import { formatDuration, formatWhen } from '../../lib/dates';
 import { matchesOnDate, pageRows } from '../../lib/deskFilters';
 import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors, useThemedStyles, type ColorTokens } from '../../theme';
 import type { CallDirection } from '../../types';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -25,6 +25,8 @@ const DIRECTIONS: Array<{ key: 'all' | CallDirection; label: string; icon: keyof
 ];
 
 export default function CallsScreen() {
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { data } = useStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -166,32 +168,34 @@ export default function CallsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  title: { color: colors.ink, fontFamily: fonts.display, fontSize: 32 },
-  sub: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
-  sync: { height: 36, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.paper, justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  syncText: { color: colors.saffron, fontFamily: fonts.bold },
-  dirRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 4, marginBottom: 10, position: 'relative' },
-  dirHighlight: { position: 'absolute', left: 20, top: 0, height: 46, borderRadius: 14, backgroundColor: '#D6F5E8', borderWidth: 1.5, borderColor: colors.moss },
-  dirBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: colors.paper,
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  dirBtnOn: { backgroundColor: '#D6F5E8', borderColor: colors.moss },
-  dirLabel: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 13, includeFontPadding: false },
-  card: { backgroundColor: colors.paper, borderRadius: 22, padding: 14 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dirMark: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  name: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
-  meta: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
-  line: { color: colors.ink, fontFamily: fonts.medium, marginTop: 10 },
-  note: { fontFamily: fonts.semibold, marginTop: 6, fontSize: 13, color: colors.ink },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    title: { color: colors.ink, fontFamily: fonts.display, fontSize: 32 },
+    sub: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
+    sync: { height: 36, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.paper, justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 6 },
+    syncText: { color: colors.saffron, fontFamily: fonts.bold },
+    dirRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 4, marginBottom: 10, position: 'relative' },
+    dirHighlight: { position: 'absolute', left: 20, top: 0, height: 46, borderRadius: 14, backgroundColor: colors.filterOn, borderWidth: 1.5, borderColor: colors.moss },
+    dirBtn: {
+      flex: 1,
+      height: 46,
+      borderRadius: 14,
+      backgroundColor: colors.paper,
+      borderWidth: 1.5,
+      borderColor: colors.line,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    dirBtnOn: { backgroundColor: colors.filterOn, borderColor: colors.moss },
+    dirLabel: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 13, includeFontPadding: false },
+    card: { backgroundColor: colors.paper, borderRadius: 22, padding: 14 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    dirMark: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    name: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
+    meta: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
+    line: { color: colors.ink, fontFamily: fonts.medium, marginTop: 10 },
+    note: { fontFamily: fonts.semibold, marginTop: 6, fontSize: 13, color: colors.ink },
+  });
+}

@@ -4,9 +4,10 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Field } from '../../components/ui';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useThemedStyles, type ColorTokens } from '../../theme';
 
 export default function LoginScreen() {
+  const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { login } = useStore();
@@ -22,7 +23,7 @@ export default function LoginScreen() {
         <Text style={styles.tagline}>Smart CRM for Vehicle Businesses</Text>
       </View>
       <Text style={styles.word}>Welcome back</Text>
-      <Text style={styles.lede}>Sign in with your CRM API account. This app does not use a local demo desk.</Text>
+      <Text style={styles.lede}>Sign in with your CRM API account. Use the PHP email and password to load live desk data.</Text>
       <View style={styles.card}>
         <Field
           label="Email or mobile"
@@ -56,24 +57,26 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream, paddingHorizontal: 22 },
-  brandCard: {
-    backgroundColor: colors.paper,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 16,
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  logo: { width: '100%', height: 108 },
-  brand: { color: '#0B2A6B', fontFamily: fonts.display, fontSize: 28, letterSpacing: 0.4, marginTop: 2 },
-  tagline: { color: '#F15A24', fontFamily: fonts.semibold, fontSize: 14, marginTop: 2, textAlign: 'center' },
-  word: { color: colors.ink, fontFamily: fonts.display, fontSize: 32, marginTop: 2 },
-  lede: { color: colors.muted, fontFamily: fonts.medium, fontSize: 14, lineHeight: 21, marginTop: 6, marginBottom: 16 },
-  card: { backgroundColor: colors.paper, borderRadius: 22, padding: 16 },
-  error: { color: colors.clay, fontFamily: fonts.medium, marginBottom: 10 },
-  linkBtn: { alignItems: 'center', paddingTop: 14 },
-  link: { color: colors.saffron, fontFamily: fonts.semibold },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.cream, paddingHorizontal: 22 },
+    brandCard: {
+      backgroundColor: colors.paper,
+      borderRadius: 24,
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 16,
+      alignItems: 'center',
+      marginBottom: 18,
+    },
+    logo: { width: '100%', height: 108 },
+    brand: { color: '#0B2A6B', fontFamily: fonts.display, fontSize: 28, letterSpacing: 0.4, marginTop: 2 },
+    tagline: { color: '#F15A24', fontFamily: fonts.semibold, fontSize: 14, marginTop: 2, textAlign: 'center' },
+    word: { color: colors.ink, fontFamily: fonts.display, fontSize: 32, marginTop: 2 },
+    lede: { color: colors.muted, fontFamily: fonts.medium, fontSize: 14, lineHeight: 21, marginTop: 6, marginBottom: 16 },
+    card: { backgroundColor: colors.paper, borderRadius: 22, padding: 16 },
+    error: { color: colors.clay, fontFamily: fonts.medium, marginBottom: 10 },
+    linkBtn: { alignItems: 'center', paddingTop: 14 },
+    link: { color: colors.saffron, fontFamily: fonts.semibold },
+  });
+}

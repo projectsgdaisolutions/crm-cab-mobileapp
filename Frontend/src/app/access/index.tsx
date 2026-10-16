@@ -3,9 +3,10 @@ import { Pressable, Text, View } from 'react-native';
 import { Card, PageHeader, Screen } from '../../components/ui';
 import { ACCESS_KEYS, loadAccess, saveAccess, type AccessMap } from '../../lib/localAccount';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 export default function AccessScreen() {
+  const colors = useColors();
   const { session } = useStore();
   const [access, setAccess] = useState<AccessMap | null>(null);
 

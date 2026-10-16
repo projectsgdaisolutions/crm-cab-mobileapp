@@ -5,10 +5,11 @@ import { Card, EmptyState, Field, FilterChips, PageHeader, Pill, Screen } from '
 import { formatDay, inr } from '../../lib/dates';
 import { matchesOnDate, matchesQuery } from '../../lib/deskFilters';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { BOOKING_STATUSES } from '../../types';
 
 export default function BookingsScreen() {
+  const colors = useColors();
   const { data } = useStore();
   const router = useRouter();
   const [filter, setFilter] = useState('All');

@@ -4,9 +4,10 @@ import { Pressable, Text, View } from 'react-native';
 import { Card, EmptyState, FilterChips, PageHeader, Screen } from '../../components/ui';
 import { formatWhen } from '../../lib/dates';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 export default function NotesScreen() {
+  const colors = useColors();
   const { data } = useStore();
   const router = useRouter();
   const [filter, setFilter] = useState('All');

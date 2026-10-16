@@ -9,11 +9,12 @@ import { formatDuration, formatWhen } from '../../lib/dates';
 import { matchesQuery } from '../../lib/deskFilters';
 import { discoverRecordingFiles } from '../../native/callLog';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 const sample = require('../../../assets/sample-call.wav');
 
 export default function RecordingsScreen() {
+  const colors = useColors();
   const { data, attachRecording, playRecording } = useStore();
   const playerRef = useRef<AudioPlayer | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -55,9 +56,6 @@ export default function RecordingsScreen() {
       </View>
       <FilterChips options={['All', 'available', 'unavailable', 'uploaded', 'failed']} value={availability} onChange={setAvailability} />
       <View style={{ paddingHorizontal: 20, gap: 10 }}>
-        {data.recordings.length === 0 ? <EmptyState title="No recordings yet" body="After a call, attach a file from the outcome sheet or upload one here." /> : null}
-        {data.recordings.map((item) => {
-          const canPlay = Boolean(item.uri || item.remoteUrl || item.previewClip || item.id);
         {data.recordings.filter((item) => (availability === 'All' || item.availability === availability) && matchesQuery(`${item.name} ${item.fileName} ${item.mobile} ${item.executive ?? ''}`, query)).length === 0 ? <EmptyState title="No recordings yet" body="After a call, attach a file from the outcome sheet or upload one here." /> : null}
         {data.recordings.filter((item) => (availability === 'All' || item.availability === availability) && matchesQuery(`${item.name} ${item.fileName} ${item.mobile} ${item.executive ?? ''}`, query)).map((item) => {
           const canPlay = Boolean(item.uri || item.remoteUrl || item.previewClip);
@@ -117,7 +115,7 @@ export default function RecordingsScreen() {
             });
             setMessage(`Attached ${asset.name}.`);
           }}
-          style={{ backgroundColor: colors.forest, borderRadius: 14, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}
+          style={{ backgroundColor: colors.forestFill, borderRadius: 14, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}
         >
           <Text style={{ color: colors.white, fontFamily: fonts.bold }}>Upload a recording file</Text>
         </Pressable>

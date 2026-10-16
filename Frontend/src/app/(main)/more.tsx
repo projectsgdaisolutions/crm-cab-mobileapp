@@ -2,13 +2,15 @@ import { useRouter } from 'expo-router';
 import { ScrollView } from 'react-native';
 import { PageHeader, RowLink } from '../../components/ui';
 import { useStore } from '../../state/store';
+import { useColors } from '../../theme';
 
 export default function MoreScreen() {
+  const colors = useColors();
   const router = useRouter();
   const { data, session } = useStore();
   const pending = data.followUps.filter((item) => item.status === 'Pending' || item.status === 'Rescheduled').length;
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 28 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.cream }} contentContainerStyle={{ paddingBottom: 28 }}>
       <PageHeader title="More" subtitle="Follow-ups, bookings, fleet, recordings" />
       <ViewSpacer />
       <RowLink icon="notifications-outline" title="Notifications" detail="Follow-ups, leads, bookings, missed calls" onPress={() => router.push('/notifications')} />

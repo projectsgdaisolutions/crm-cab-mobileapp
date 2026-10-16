@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors, fonts } from '../theme';
+import { fonts, useColors } from '../theme';
 
 let staggerQueue: Animated.CompositeAnimation[] = [];
 let staggerFrame = 0;
@@ -83,6 +83,7 @@ export function PressScale({
 
 /** Red ring that expands and fades around a missed-call avatar. */
 export function PulseRing({ active, size, children }: { active: boolean; size: number; children: ReactNode }) {
+  const colors = useColors();
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(0.75)).current;
 
@@ -143,6 +144,7 @@ export function CountUp({ value, style }: { value: number; style?: StyleProp<Tex
 
 /** Missed-call count springs in with a small overshoot. */
 export function BadgePop({ count }: { count: number }) {
+  const colors = useColors();
   const scale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -176,6 +178,7 @@ export function BadgePop({ count }: { count: number }) {
 
 /** Sync icon spins, then becomes a tick. */
 export function SyncGlyph({ spinning, done }: { spinning: boolean; done: boolean }) {
+  const colors = useColors();
   const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -201,6 +204,7 @@ export function SyncGlyph({ spinning, done }: { spinning: boolean; done: boolean
 
 /** "3 calls synced" slides up, then leaves. */
 export function Toast({ message, onDone }: { message: string; onDone: () => void }) {
+  const colors = useColors();
   const translateY = useRef(new Animated.Value(28)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -243,6 +247,7 @@ export function Toast({ message, onDone }: { message: string; onDone: () => void
 
 /** Ring that fills around the play control while audio is playing. */
 export function ProgressRing({ active, size = 28 }: { active: boolean; size?: number }) {
+  const colors = useColors();
   const progress = useRef(new Animated.Value(0)).current;
   const radius = (size - 3) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -265,7 +270,7 @@ export function ProgressRing({ active, size = 28 }: { active: boolean; size?: nu
 
   return (
     <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-      <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#E7E9F2" strokeWidth={2} fill="none" />
+      <Circle cx={size / 2} cy={size / 2} r={radius} stroke={colors.line} strokeWidth={2} fill="none" />
       {active ? (
         <Circle
           cx={size / 2}
@@ -285,6 +290,7 @@ export function ProgressRing({ active, size = 28 }: { active: boolean; size?: nu
 
 /** Equalizer bars bounce while a recording plays. */
 export function Waveform({ active }: { active: boolean }) {
+  const colors = useColors();
   const bar0 = useRef(new Animated.Value(0.35)).current;
   const bar1 = useRef(new Animated.Value(0.35)).current;
   const bar2 = useRef(new Animated.Value(0.35)).current;

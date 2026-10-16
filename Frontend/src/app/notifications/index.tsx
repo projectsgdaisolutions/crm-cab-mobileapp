@@ -3,9 +3,10 @@ import { Pressable, Text, View } from 'react-native';
 import { Card, EmptyState, PageHeader, Screen } from '../../components/ui';
 import { formatWhen } from '../../lib/dates';
 import { useNotifications } from '../../state/useNotifications';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 export default function NotificationsScreen() {
+  const colors = useColors();
   const router = useRouter();
   const { items, read, unreadCount, markRead, markAllRead } = useNotifications();
 
@@ -37,7 +38,7 @@ export default function NotificationsScreen() {
                 router.push(item.href as never);
               }}
             >
-              <Card style={{ backgroundColor: seen ? colors.paper : '#F3F1FF' }}>
+              <Card style={{ backgroundColor: seen ? colors.paper : colors.blueWash }}>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View
                     style={{

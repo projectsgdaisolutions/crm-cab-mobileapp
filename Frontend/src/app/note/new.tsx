@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { Button, Field, PageHeader, Screen } from '../../components/ui';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import type { EntityType } from '../../types';
 
 export default function NoteFormScreen() {
+  const colors = useColors();
   const params = useLocalSearchParams<{ entityType?: string; entityId?: string; name?: string }>();
   const entityType = (params.entityType === 'lead' ? 'lead' : 'customer') as EntityType;
   const entityId = params.entityId ?? '';

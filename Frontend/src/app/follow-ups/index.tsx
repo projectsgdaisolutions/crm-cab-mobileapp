@@ -6,11 +6,14 @@ import { Card, EmptyState, Field, FilterChips, PageHeader, Pill, Screen } from '
 import { formatDay, isOverdueFollowUp, ymd } from '../../lib/dates';
 import { matchesOnDate, matchesQuery } from '../../lib/deskFilters';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 const FILTERS = ['Today', 'Overdue', 'Upcoming', 'Completed'];
 
 export default function FollowUpsScreen() {
+  const colors = useColors();
+  const chip = { borderWidth: 1, borderColor: colors.outlineBorder, borderRadius: 12, paddingHorizontal: 14, height: 40, justifyContent: 'center' as const, backgroundColor: colors.paper };
+  const chipText = { fontFamily: fonts.bold, color: colors.saffron };
   const { data, saveFollowUp } = useStore();
   const router = useRouter();
   const path = usePathname();
@@ -95,6 +98,3 @@ export default function FollowUpsScreen() {
     </Screen>
   );
 }
-
-const chip = { borderWidth: 1, borderColor: '#E3E6F0', borderRadius: 12, paddingHorizontal: 14, height: 40, justifyContent: 'center' as const, backgroundColor: colors.paper };
-const chipText = { fontFamily: fonts.bold, color: colors.saffron };

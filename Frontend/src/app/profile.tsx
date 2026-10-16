@@ -5,21 +5,35 @@ import { Pressable, Text, View } from 'react-native';
 import { RiseIn } from '../components/Motion';
 import { Button, Card, ChoiceRow, Field, PageHeader, RowLink, Screen } from '../components/ui';
 import { useStore } from '../state/store';
-import { colors, fonts } from '../theme';
+import {
+  THEME_CHOICES,
+  choiceFromPreference,
+  fonts,
+  preferenceFromChoice,
+  useColors,
+  useTheme,
+} from '../theme';
 
 const PREFS_KEY = 'cabcrm.prefs.v1';
 const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'America/New_York', 'Europe/London'];
 
 export default function ProfileScreen() {
-  const { session, apiBase, setApiBase, logout, mode, loadPreferences, savePreferences, updateAdminProfile } = useStore();
-  const { session, logout, restoreSample, mode, data } = useStore();
+  const colors = useColors();
+  const { preference, setPreference } = useTheme();
+  const { session, apiBase, setApiBase, logout, mode, data, loadPreferences, savePreferences, updateAdminProfile } = useStore();
   const router = useRouter();
+  const [url, setUrl] = useState(apiBase);
+  const [saved, setSaved] = useState('');
   const [company, setCompany] = useState('VehicoCRM');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
   const [bio, setBio] = useState('');
   const [reminders, setReminders] = useState(true);
   const [leadAlerts, setLeadAlerts] = useState(true);
   const [bookingAlerts, setBookingAlerts] = useState(true);
+
+  useEffect(() => {
+    setUrl(apiBase);
+  }, [apiBase]);
 
   useEffect(() => {
     if (session?.timezone) setTimezone(session.timezone);
@@ -59,96 +73,105 @@ export default function ProfileScreen() {
       <PageHeader title="Profile" subtitle={session?.desk} back />
       <View style={{ padding: 20, gap: 14 }}>
         <RiseIn>
-        <Card>
-          <Text style={{ fontFamily: fonts.display, fontSize: 28, color: colors.ink }}>{session?.name}</Text>
-          <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{session?.role === 'admin' ? 'Admin' : 'Calling executive'}</Text>
-          <Text style={{ fontFamily: fonts.medium, color: colors.ink, marginTop: 8 }}>{session?.email}</Text>
-          <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{session?.mobile}</Text>
-          <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Not signed in to the CRM API'}</Text>
-        </Card>
-        <Field label="CRM API address" value={url} onChangeText={setUrl} placeholder="https://api.example.com" keyboardType="default" />
-        {saved ? <Text style={{ fontFamily: fonts.medium, color: colors.forest }}>{saved}</Text> : null}
-        <Button
-          label="Save API address"
-          tone="forest"
-          onPress={async () => {
-            await setApiBase(url);
-            setSaved('Saved. Sign in again to use the CRM API.');
-          }}
-        />
-        </RiseIn>
-        <RiseIn delay={80}>
-        {session?.role === 'admin' ? (
           <Card>
-            <Text style={{ fontFamily: fonts.display, fontSize: 22, color: colors.ink }}>Team & Users</Text>
-            <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4, marginBottom: 12, lineHeight: 20 }}>
-              Add a calling executive, or activate and deactivate accounts.
-            </Text>
-            <Button label="Add executive" onPress={() => router.push('/team?create=1')} />
-            <View style={{ height: 8 }} />
-            <Button label="Open Team & Users" tone="ghost" onPress={() => router.push('/team')} />
-            <View style={{ height: 8 }} />
-            <Button label="Export CSV report" tone="ghost" onPress={() => router.push('/reports/export')} />
+            <Text style={{ fontFamily: fonts.display, fontSize: 28, color: colors.ink }}>{session?.name}</Text>
+            <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4 }}>{session?.role === 'admin' ? 'Admin' : 'Calling executive'}</Text>
+            <Text style={{ fontFamily: fonts.medium, color: colors.ink, marginTop: 8 }}>{session?.email}</Text>
+            <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{session?.mobile}</Text>
+            <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Not signed in to the CRM API'}</Text>
           </Card>
-        ) : null}
-        <RowLink icon="bus-outline" title="Fleet" detail="Drivers and vehicles" onPress={() => router.push('/fleet')} />
-        <RowLink icon="checkbox-outline" title="Tasks" detail="Due work for the desk" onPress={() => router.push('/tasks')} />
-        <RowLink icon="document-text-outline" title="Notes" detail="Remarks on this desk" onPress={() => router.push('/notes')} />
-        <RowLink icon="mic-outline" title="Recordings" detail="Playback and upload" onPress={() => router.push('/recordings')} />
-        <RowLink icon="sync-outline" title="Call log sync" detail="Match the handset log" onPress={() => router.push('/sync')} />
-        <RowLink icon="person-circle-outline" title="Drivers" detail={`${data.drivers.length} captains`} onPress={() => router.push('/drivers')} />
-        <RowLink icon="car-sport-outline" title="Vehicles" detail={`${data.vehicles.length} cars`} onPress={() => router.push('/vehicles')} />
-        <RowLink icon="lock-closed-outline" title="Account security" detail="Change the password on this phone" onPress={() => router.push('/security')} />
-        <RowLink icon="phone-portrait-outline" title="This device" detail="Local reminder registration" onPress={() => router.push('/device')} />
-        {session?.role === 'admin' ? (
-          <RowLink icon="key-outline" title="Access" detail="Permissions saved on this phone" onPress={() => router.push('/access')} />
-        ) : null}
-        </RiseIn>
-        <RiseIn delay={140}>
-        <Card>
-          <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>CRM preferences</Text>
-          <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 4, marginBottom: 8 }}>
-            {mode === 'api' ? 'Saved to this account on the CRM API.' : 'Saved on this phone. Nothing is sent until an API address is set.'}
-          </Text>
-          <Field label="Company" value={company} onChangeText={setCompany} />
-          <ChoiceRow label="Timezone" options={TIMEZONES} value={timezone} onChange={setTimezone} />
-          <Field label="Bio" value={bio} onChangeText={setBio} multiline placeholder="How this desk should be described" />
-          <Toggle label="Follow-up reminders" on={reminders} onPress={() => setReminders((value) => !value)} />
-          <Toggle label="New lead assignment" on={leadAlerts} onPress={() => setLeadAlerts((value) => !value)} />
-          <Toggle label="Booking updates" on={bookingAlerts} onPress={() => setBookingAlerts((value) => !value)} />
+          <Field label="CRM API address" value={url} onChangeText={setUrl} placeholder="http://localhost:8000/api" keyboardType="default" />
+          {saved ? <Text style={{ fontFamily: fonts.medium, color: colors.forest }}>{saved}</Text> : null}
           <Button
-            label="Save preferences"
+            label="Save API address"
             tone="forest"
             onPress={async () => {
-              const prefs = { company, timezone, bio, reminders, leadAlerts, bookingAlerts };
-              await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-              if (mode === 'api' && session) {
-                try {
-                  await updateAdminProfile({
-                    name: session.name,
-                    email: session.email,
-                    phone: session.mobile,
-                    timezone,
-                    bio,
-                  });
-                  await savePreferences(prefs);
-                  setSaved('Preferences saved to the CRM API.');
-                  return;
-                } catch (error) {
-                  setSaved(error instanceof Error ? error.message : 'Could not save to the CRM API.');
-                  return;
-                }
-              }
-              setSaved('Preferences saved on this phone.');
+              await setApiBase(url);
+              setSaved('Saved. Sign in again to use the CRM API.');
             }}
           />
-        </Card>
-              await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({ company, timezone, bio, reminders, leadAlerts, bookingAlerts }));
-            }}
-          />
-        </Card>
         </RiseIn>
-        <Button label="Restore sample desk" tone="ghost" onPress={async () => restoreSample()} />
+        <RiseIn>
+          {session?.role === 'admin' ? (
+            <Card>
+              <Text style={{ fontFamily: fonts.display, fontSize: 22, color: colors.ink }}>Team & Users</Text>
+              <Text style={{ fontFamily: fonts.medium, color: colors.muted, marginTop: 4, marginBottom: 12, lineHeight: 20 }}>
+                Add a calling executive, or activate and deactivate accounts.
+              </Text>
+              <Button label="Add executive" onPress={() => router.push('/team?create=1')} />
+              <View style={{ height: 8 }} />
+              <Button label="Open Team & Users" tone="ghost" onPress={() => router.push('/team')} />
+              <View style={{ height: 8 }} />
+              <Button label="Export CSV report" tone="ghost" onPress={() => router.push('/reports/export')} />
+            </Card>
+          ) : null}
+          <RowLink icon="bus-outline" title="Fleet" detail="Drivers and vehicles" onPress={() => router.push('/fleet')} />
+          <RowLink icon="checkbox-outline" title="Tasks" detail="Due work for the desk" onPress={() => router.push('/tasks')} />
+          <RowLink icon="document-text-outline" title="Notes" detail="Remarks on this desk" onPress={() => router.push('/notes')} />
+          <RowLink icon="mic-outline" title="Recordings" detail="Playback and upload" onPress={() => router.push('/recordings')} />
+          <RowLink icon="sync-outline" title="Call log sync" detail="Match the handset log" onPress={() => router.push('/sync')} />
+          <RowLink icon="person-circle-outline" title="Drivers" detail={`${data.drivers.length} captains`} onPress={() => router.push('/drivers')} />
+          <RowLink icon="car-sport-outline" title="Vehicles" detail={`${data.vehicles.length} cars`} onPress={() => router.push('/vehicles')} />
+          <RowLink icon="lock-closed-outline" title="Account security" detail="Change the password" onPress={() => router.push('/security')} />
+          <RowLink icon="phone-portrait-outline" title="This device" detail="Device registration" onPress={() => router.push('/device')} />
+          {session?.role === 'admin' ? (
+            <RowLink icon="key-outline" title="Access" detail="Permissions" onPress={() => router.push('/access')} />
+          ) : null}
+        </RiseIn>
+        <RiseIn>
+          <Card>
+            <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>Appearance</Text>
+            <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 4, marginBottom: 8 }}>
+              Applies to every screen. Saved on this phone.
+            </Text>
+            <ChoiceRow
+              label="Theme"
+              options={THEME_CHOICES}
+              value={choiceFromPreference(preference)}
+              onChange={(choice) => void setPreference(preferenceFromChoice(choice))}
+            />
+          </Card>
+        </RiseIn>
+        <RiseIn>
+          <Card>
+            <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>CRM preferences</Text>
+            <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 4, marginBottom: 8 }}>
+              {mode === 'api' ? 'Saved to this account on the CRM API.' : 'Saved on this phone. Nothing is sent until an API address is set.'}
+            </Text>
+            <Field label="Company" value={company} onChangeText={setCompany} />
+            <ChoiceRow label="Timezone" options={TIMEZONES} value={timezone} onChange={setTimezone} />
+            <Field label="Bio" value={bio} onChangeText={setBio} multiline placeholder="How this desk should be described" />
+            <Toggle label="Follow-up reminders" on={reminders} onPress={() => setReminders((value) => !value)} />
+            <Toggle label="New lead assignment" on={leadAlerts} onPress={() => setLeadAlerts((value) => !value)} />
+            <Toggle label="Booking updates" on={bookingAlerts} onPress={() => setBookingAlerts((value) => !value)} />
+            <Button
+              label="Save preferences"
+              tone="forest"
+              onPress={async () => {
+                const prefs = { company, timezone, bio, reminders, leadAlerts, bookingAlerts };
+                await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+                if (mode === 'api' && session) {
+                  try {
+                    await updateAdminProfile({
+                      name: session.name,
+                      email: session.email,
+                      phone: session.mobile,
+                      timezone,
+                      bio,
+                    });
+                    await savePreferences(prefs);
+                    setSaved('Preferences saved to the CRM API.');
+                    return;
+                  } catch (error) {
+                    setSaved(error instanceof Error ? error.message : 'Could not save to the CRM API.');
+                    return;
+                  }
+                }
+                setSaved('Preferences saved on this phone.');
+              }}
+            />
+          </Card>
+        </RiseIn>
         <Button
           label="Sign out"
           onPress={async () => {
@@ -162,6 +185,7 @@ export default function ProfileScreen() {
 }
 
 function Toggle({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const colors = useColors();
   return (
     <Pressable onPress={onPress} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
       <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{label}</Text>

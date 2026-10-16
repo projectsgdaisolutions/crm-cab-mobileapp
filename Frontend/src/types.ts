@@ -223,25 +223,6 @@ export interface Executive {
   createdAt: string;
 }
 
-export interface Driver {
-  id: string;
-  name: string;
-  mobile: string;
-  license: string;
-  city: string;
-  status: 'Active' | 'Inactive';
-  syncState: SyncState;
-}
-
-export interface FleetVehicle {
-  id: string;
-  number: string;
-  type: VehicleType;
-  model: string;
-  status: 'Active' | 'Inactive';
-  syncState: SyncState;
-}
-
 export interface TaskItem {
   id: string;
   title: string;
@@ -280,7 +261,6 @@ export interface AppData {
   tasks: TaskItem[];
   drivers: Driver[];
   vehicles: Vehicle[];
-  vehicles: FleetVehicle[];
 }
 
 export const LEAD_STATUSES: LeadStatus[] = [

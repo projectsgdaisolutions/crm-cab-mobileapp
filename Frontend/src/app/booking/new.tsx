@@ -5,10 +5,11 @@ import { Button, ChoiceRow, Field, PageHeader, Screen, SelectField } from '../..
 import { ymd } from '../../lib/dates';
 import { makeId } from '../../lib/ids';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import { BOOKING_STATUSES, PAYMENT_STATUSES, VEHICLE_TYPES, type Booking, type BookingStatus, type EntityType, type PaymentStatus, type VehicleType } from '../../types';
 
 export default function BookingFormScreen() {
+  const colors = useColors();
   const params = useLocalSearchParams<{ entityType?: string; entityId?: string }>();
   const { data, saveBooking, session } = useStore();
   const router = useRouter();

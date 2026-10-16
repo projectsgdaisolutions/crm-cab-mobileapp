@@ -5,7 +5,7 @@ import { Button, Card, ChoiceRow, Field, PageHeader, Pill, Screen } from '../../
 import { makeId } from '../../lib/ids';
 import { isPlausibleMobile } from '../../lib/phone';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 import type { Executive, RolePermission } from '../../types';
 
 const ROLE_NOTE: Record<Executive['role'], string> = {
@@ -28,6 +28,9 @@ const MATRIX: Array<{ feature: string; admin: boolean; exec: boolean }> = [
 ];
 
 export default function TeamScreen() {
+  const colors = useColors();
+  const chip = { borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.paper };
+  const chipText = { fontFamily: fonts.semibold, color: colors.ink };
   const params = useLocalSearchParams<{ create?: string }>();
   const { data, session, saveExecutive, loadPermissions, savePermission } = useStore();
   const isAdmin = session?.role === 'admin';
@@ -241,6 +244,7 @@ export default function TeamScreen() {
 }
 
 function Count({ label, value }: { label: string; value: number }) {
+  const colors = useColors();
   return (
     <Card style={{ flex: 1, padding: 12 }}>
       <Text style={{ fontFamily: fonts.medium, color: colors.muted, fontSize: 12 }}>{label}</Text>
@@ -248,6 +252,3 @@ function Count({ label, value }: { label: string; value: number }) {
     </Card>
   );
 }
-
-const chip = { borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.paper };
-const chipText = { fontFamily: fonts.semibold, color: colors.ink };

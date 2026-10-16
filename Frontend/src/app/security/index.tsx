@@ -4,9 +4,10 @@ import { Button, Card, Field, PageHeader, Screen } from '../../components/ui';
 import { DEMO_PASSWORD } from '../../data/seed';
 import { loadLocalPasswords, saveLocalPassword } from '../../lib/localAccount';
 import { useStore } from '../../state/store';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors } from '../../theme';
 
 export default function SecurityScreen() {
+  const colors = useColors();
   const { session } = useStore();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');

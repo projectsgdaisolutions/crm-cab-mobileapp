@@ -9,9 +9,11 @@ import { formatPhone } from '../../lib/phone';
 import { useStore } from '../../state/store';
 import { useNotifications } from '../../state/useNotifications';
 import { CountUp } from '../../components/Motion';
-import { colors, fonts } from '../../theme';
+import { fonts, useColors, useThemedStyles, type ColorTokens } from '../../theme';
 
 export default function DashboardScreen() {
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, data, notice, clearNotice, refresh } = useStore();
@@ -140,6 +142,7 @@ export default function DashboardScreen() {
 }
 
 function HeroStat({ value, label }: { value: number; label: string }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={{ flex: 1 }}>
       <CountUp value={value} style={styles.heroValue} />
@@ -149,6 +152,7 @@ function HeroStat({ value, label }: { value: number; label: string }) {
 }
 
 function Stat({ icon, tint, value, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; tint: string; value: number; label: string; onPress: () => void }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.stat, pressed && styles.dim]}>
       <Ionicons name={icon} size={18} color={tint} />
@@ -158,41 +162,43 @@ function Stat({ icon, tint, value, label, onPress }: { icon: keyof typeof Ionico
   );
 }
 
-const styles = StyleSheet.create({
-  topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  hello: { color: colors.ink, fontFamily: fonts.display, fontSize: 28 },
-  date: { color: colors.muted, fontFamily: fonts.medium, marginTop: 4, fontSize: 14 },
-  profile: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.clay, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
-  badgeText: { color: colors.white, fontFamily: fonts.bold, fontSize: 9 },
-  pair: { flexDirection: 'row', gap: 12, marginTop: 18 },
-  outline: { flex: 1, height: 48, borderRadius: 16, borderWidth: 1, borderColor: '#E3E6F0', backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  outlineText: { color: colors.saffron, fontFamily: fonts.bold, fontSize: 15 },
-  section: { color: colors.ink, fontFamily: fonts.bold, fontSize: 18, marginTop: 22, marginBottom: 10 },
-  sectionRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  link: { color: colors.saffron, fontFamily: fonts.semibold, marginBottom: 10 },
-  chip: { height: 40, paddingHorizontal: 12, borderRadius: 14, backgroundColor: colors.paper, borderWidth: 1, borderColor: '#E6E8F2', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  chipOn: { backgroundColor: '#EEF0F6' },
-  chipText: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 13 },
-  hero: { marginTop: 16, backgroundColor: colors.hero, borderRadius: 24, padding: 18 },
-  heroTop: { flexDirection: 'row', alignItems: 'flex-start' },
-  heroKicker: { color: '#C9D0E4', fontFamily: fonts.medium, fontSize: 13 },
-  heroTitle: { color: colors.white, fontFamily: fonts.display, fontSize: 22, marginTop: 4 },
-  heroCall: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
-  heroStats: { flexDirection: 'row', marginTop: 18 },
-  heroValue: { color: colors.white, fontFamily: fonts.display, fontSize: 28 },
-  heroLabel: { color: '#C9D0E4', fontFamily: fonts.medium, fontSize: 12, marginTop: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  stat: { width: '47%', flexGrow: 1, backgroundColor: colors.paper, borderRadius: 22, padding: 16, minHeight: 118 },
-  statValue: { color: colors.ink, fontFamily: fonts.display, fontSize: 30, marginTop: 10 },
-  statLabel: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
-  activity: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  check: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#EEEAFE', alignItems: 'center', justifyContent: 'center' },
-  activityText: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 14 },
-  callRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  callName: { color: colors.ink, fontFamily: fonts.bold, fontSize: 15 },
-  callMeta: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
-  dirIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  callTime: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12 },
-  dim: { opacity: 0.72 },
-});
+function makeStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    hello: { color: colors.ink, fontFamily: fonts.display, fontSize: 28 },
+    date: { color: colors.muted, fontFamily: fonts.medium, marginTop: 4, fontSize: 14 },
+    profile: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+    badge: { position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.clay, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+    badgeText: { color: colors.white, fontFamily: fonts.bold, fontSize: 9 },
+    pair: { flexDirection: 'row', gap: 12, marginTop: 18 },
+    outline: { flex: 1, height: 48, borderRadius: 16, borderWidth: 1, borderColor: colors.outlineBorder, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+    outlineText: { color: colors.saffron, fontFamily: fonts.bold, fontSize: 15 },
+    section: { color: colors.ink, fontFamily: fonts.bold, fontSize: 18, marginTop: 22, marginBottom: 10 },
+    sectionRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+    link: { color: colors.saffron, fontFamily: fonts.semibold, marginBottom: 10 },
+    chip: { height: 40, paddingHorizontal: 12, borderRadius: 14, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.outlineBorder, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    chipOn: { backgroundColor: colors.chipOn },
+    chipText: { color: colors.ink, fontFamily: fonts.semibold, fontSize: 13 },
+    hero: { marginTop: 16, backgroundColor: colors.hero, borderRadius: 24, padding: 18 },
+    heroTop: { flexDirection: 'row', alignItems: 'flex-start' },
+    heroKicker: { color: colors.heroMuted, fontFamily: fonts.medium, fontSize: 13 },
+    heroTitle: { color: colors.white, fontFamily: fonts.display, fontSize: 22, marginTop: 4 },
+    heroCall: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+    heroStats: { flexDirection: 'row', marginTop: 18 },
+    heroValue: { color: colors.white, fontFamily: fonts.display, fontSize: 28 },
+    heroLabel: { color: colors.heroMuted, fontFamily: fonts.medium, fontSize: 12, marginTop: 2 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    stat: { width: '47%', flexGrow: 1, backgroundColor: colors.paper, borderRadius: 22, padding: 16, minHeight: 118 },
+    statValue: { color: colors.ink, fontFamily: fonts.display, fontSize: 30, marginTop: 10 },
+    statLabel: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
+    activity: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+    check: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.blueWash, alignItems: 'center', justifyContent: 'center' },
+    activityText: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 14 },
+    callRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+    callName: { color: colors.ink, fontFamily: fonts.bold, fontSize: 15 },
+    callMeta: { color: colors.muted, fontFamily: fonts.medium, marginTop: 2 },
+    dirIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+    callTime: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12 },
+    dim: { opacity: 0.72 },
+  });
+}

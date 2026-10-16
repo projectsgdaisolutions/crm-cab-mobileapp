@@ -9,7 +9,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DispositionSheet } from '../components/DispositionSheet';
 import { StoreProvider, useStore } from '../state/store';
-import { colors } from '../theme';
+import { ThemeProvider, useColors, useTheme, useThemedStyles, type ColorTokens } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -30,6 +30,48 @@ function ApiSessionGuard() {
   return null;
 }
 
+function ThemedShell() {
+  const { scheme } = useTheme();
+  const colors = useColors();
+  const styles = useThemedStyles(makeShellStyles);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const style = document.createElement('style');
+    style.textContent = `html,body,#root{height:100%;margin:0;background:${colors.webHtml}}`;
+    document.head.appendChild(style);
+    document.documentElement.style.backgroundColor = colors.webHtml;
+    document.body.style.backgroundColor = colors.webHtml;
+    return () => {
+      style.remove();
+    };
+  }, [colors.webHtml]);
+
+  return (
+    <View style={Platform.OS === 'web' ? styles.webBg : styles.fill}>
+      <View style={Platform.OS === 'web' ? styles.phone : styles.fill}>
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.cream } }} />
+        <DispositionSheet />
+      </View>
+    </View>
+  );
+}
+
+function makeShellStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    fill: { flex: 1, backgroundColor: colors.cream },
+    webBg: { flex: 1, backgroundColor: colors.webChrome, alignItems: 'center' },
+    phone: {
+      flex: 1,
+      width: '100%',
+      maxWidth: 440,
+      backgroundColor: colors.cream,
+      overflow: 'hidden',
+    },
+  });
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -44,42 +86,16 @@ export default function RootLayout() {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => undefined);
   }, [fontsLoaded]);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const style = document.createElement('style');
-    style.textContent = 'html,body,#root{height:100%;margin:0;background:#0E2420}';
-    document.head.appendChild(style);
-    return () => {
-      style.remove();
-    };
-  }, []);
-
   if (!fontsLoaded) return null;
 
   return (
     <SafeAreaProvider>
-      <StoreProvider>
-        <ApiSessionGuard />
-        <View style={Platform.OS === 'web' ? styles.webBg : styles.fill}>
-          <View style={Platform.OS === 'web' ? styles.phone : styles.fill}>
-            <StatusBar style="light" />
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.cream } }} />
-            <DispositionSheet />
-          </View>
-        </View>
-      </StoreProvider>
+      <ThemeProvider>
+        <StoreProvider>
+          <ApiSessionGuard />
+          <ThemedShell />
+        </StoreProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.cream },
-  webBg: { flex: 1, backgroundColor: '#E6E9F2', alignItems: 'center' },
-  phone: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: colors.cream,
-    overflow: 'hidden',
-  },
-});
