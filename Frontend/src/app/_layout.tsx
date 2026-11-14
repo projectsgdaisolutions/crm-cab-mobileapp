@@ -42,8 +42,14 @@ function ThemedShell() {
     document.head.appendChild(style);
     document.documentElement.style.backgroundColor = colors.webHtml;
     document.body.style.backgroundColor = colors.webHtml;
+    const icon = document.createElement('link');
+    icon.rel = 'icon';
+    icon.type = 'image/png';
+    icon.href = '/favicon.png?v=vehicocrm';
+    document.head.appendChild(icon);
     return () => {
       style.remove();
+      icon.remove();
     };
   }, [colors.webHtml]);
 

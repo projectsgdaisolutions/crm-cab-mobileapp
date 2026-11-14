@@ -4,7 +4,7 @@ export type DeviceCallRow = {
   number: string;
   name?: string | null;
   direction: 'incoming' | 'outgoing';
-  status: 'Answered' | 'Missed' | 'Busy' | 'Failed';
+  status: 'Answered' | 'Missed' | 'Busy' | 'Rejected' | 'Failed';
   startedAt: number;
   durationSec: number;
 };

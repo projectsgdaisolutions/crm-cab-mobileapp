@@ -5,18 +5,9 @@ import { Button, Card, PageHeader, Pill, Screen } from '../components/ui';
 import { formatDuration, formatWhen } from '../lib/dates';
 import { formatPhone } from '../lib/phone';
 import { matchDeviceCalls, type DeviceCall, type MatchedDeviceCall } from '../lib/syncCalls';
-import { inspectCallLogAccess, readDeviceCallLog, requestCallLogAccess, type CallLogAccess } from '../native/callLog';
+import { openCallLogSettings, readDeviceCallLog, requestCallLogAccess, type CallLogAccess } from '../native/callLog';
 import { useStore } from '../state/store';
 import { fonts, useColors } from '../theme';
-
-function previewLog(now = Date.now()): DeviceCall[] {
-  return [
-    { number: '+91 98450 11220', name: 'Ananya Iyer', direction: 'incoming', status: 'Answered', startedAt: now - 20 * 60_000, durationSec: 76 },
-    { number: '9988776655', name: 'Kabir', direction: 'outgoing', status: 'Missed', startedAt: now - 50 * 60_000, durationSec: 0 },
-    { number: '9811120394', direction: 'outgoing', status: 'Answered', startedAt: now - 26 * 60 * 60_000, durationSec: 40 },
-    { number: '+91 93220 10001', name: null, direction: 'incoming', status: 'Missed', startedAt: now - 3 * 60 * 60_000, durationSec: 0 },
-  ];
-}
 
 export default function SyncScreen() {
   const colors = useColors();
@@ -27,28 +18,29 @@ export default function SyncScreen() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [createUnknown, setCreateUnknown] = useState(true);
   const [result, setResult] = useState('');
+  const [failures, setFailures] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [synced, setSynced] = useState(false);
   const [toast, setToast] = useState('');
 
-  async function load(kind: 'device' | 'preview') {
+  const matchedCount = rows.filter((row) => Boolean(row.entityId) && !row.duplicate).length;
+  const unmatchedCount = rows.filter((row) => !row.entityId).length;
+  const selectedCount = rows.filter((row) => selected[row.key]).length;
+
+  async function load() {
+    setResult('');
+    setFailures([]);
+    setSynced(false);
+    const permission = await requestCallLogAccess();
+    setAccess(permission);
     let calls: DeviceCall[] = [];
-    if (kind === 'device') {
-      const permission = await requestCallLogAccess();
-      setAccess(permission);
-      if (permission.available && permission.granted) {
-        const read = await readDeviceCallLog(40);
-        calls = read.calls;
-        setSource(read.detail);
-      } else {
-        calls = previewLog();
-        setSource(permission.detail + ' Showing a preview log so matching can be checked.');
-      }
+    if (permission.available && permission.granted) {
+      const read = await readDeviceCallLog(40);
+      calls = read.calls;
+      setSource(read.detail);
     } else {
-      const permission = await inspectCallLogAccess();
-      setAccess(permission);
-      calls = previewLog();
-      setSource('Preview handset log. An Android development build reads the real call log after permission.');
+      calls = [];
+      setSource(permission.detail);
     }
     const matched = matchDeviceCalls(data.calls, calls, data.customers, data.leads);
     setRows(matched);
@@ -57,7 +49,6 @@ export default function SyncScreen() {
       initial[row.key] = !row.duplicate;
     });
     setSelected(initial);
-    setResult('');
   }
 
   return (
@@ -67,13 +58,24 @@ export default function SyncScreen() {
         <Card>
           <Text style={{ fontFamily: fonts.semibold, color: colors.ink, fontSize: 16 }}>What gets synced</Text>
           <Text style={{ fontFamily: fonts.regular, color: colors.muted, marginTop: 6, lineHeight: 20 }}>
-            Outgoing calls start in the native dialer. When the call ends, log the outcome. This screen also reads recent calls from the Android call log, matches numbers to customers and leads, and posts them in one request to POST /calls/bulk-sync.php.
+            The app reads recent calls from your Android device after call-log permission is granted. It matches phone numbers with CRM customers and leads, then syncs selected calls.
           </Text>
-          {access ? <Text style={{ marginTop: 8, fontFamily: fonts.medium, color: colors.forest }}>{access.detail}</Text> : null}
+          {access ? (
+            <Text style={{ marginTop: 8, fontFamily: fonts.medium, color: access.granted ? colors.forest : colors.clay }}>
+              Permission: {access.state === 'granted' ? 'granted' : access.state === 'permanently_denied' ? 'blocked in Android settings' : access.state === 'denied' ? 'denied' : 'unavailable'}
+            </Text>
+          ) : null}
         </Card>
-        <Button label="Read Android call log" tone="forest" onPress={() => load('device')} />
-        <Button label="Preview matching" tone="ghost" onPress={() => load('preview')} />
+        <Button label="Read Android call log" tone="forest" onPress={() => void load()} />
+        {access?.state === 'permanently_denied' ? (
+          <Button label="Open Android settings" tone="ghost" onPress={openCallLogSettings} />
+        ) : null}
         {source ? <Text style={{ fontFamily: fonts.medium, color: colors.muted }}>{source}</Text> : null}
+        {rows.length > 0 ? (
+          <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>
+            {rows.length} retrieved · {matchedCount} matched · {unmatchedCount} unmatched · {selectedCount} selected
+          </Text>
+        ) : null}
         {rows.map((row) => {
           const on = selected[row.key];
           return (
@@ -99,18 +101,39 @@ export default function SyncScreen() {
         ) : null}
         {rows.length > 0 ? (
           <Button
-            label="Sync selected calls"
+            label={syncing ? 'Syncing selected calls' : 'Sync selected calls'}
             onPress={async () => {
               if (syncing) return;
               const chosen = rows.filter((row) => selected[row.key]);
+              if (chosen.length === 0) {
+                setResult('Select at least one call before syncing.');
+                return;
+              }
               setSynced(false);
               setSyncing(true);
-              const summary = await importDeviceCalls(chosen, createUnknown);
-              setSyncing(false);
-              setSynced(true);
-              setResult(`Added ${summary.added} calls${summary.leads ? ` and ${summary.leads} leads` : ''}.`);
-              setToast(`${summary.added} calls synced`);
-              setRows([]);
+              setFailures([]);
+              try {
+                const summary = await importDeviceCalls(chosen, createUnknown);
+                setSyncing(false);
+                setSynced(summary.synced > 0 && summary.failed === 0);
+                const lines = [
+                  `Synced ${summary.synced} of ${summary.added} calls.`,
+                  summary.leads ? `Created ${summary.leads} lead${summary.leads === 1 ? '' : 's'}.` : '',
+                  summary.failed ? `${summary.failed} failed.` : '',
+                  summary.skipped ? `${summary.skipped} not sent.` : '',
+                ].filter(Boolean);
+                setResult(lines.join(' '));
+                setFailures(summary.errors);
+                setToast(summary.synced > 0 ? `${summary.synced} calls synced` : 'No calls were synced');
+                if (summary.synced > 0) setRows([]);
+              } catch (error) {
+                setSyncing(false);
+                setSynced(false);
+                const message = error instanceof Error ? error.message : 'Sync failed.';
+                setResult(message);
+                setFailures([message]);
+                setToast(message);
+              }
             }}
           />
         ) : null}
@@ -120,6 +143,9 @@ export default function SyncScreen() {
             {result ? <Text style={{ fontFamily: fonts.semibold, color: colors.forest }}>{result}</Text> : null}
           </View>
         ) : result ? <Text style={{ fontFamily: fonts.semibold, color: colors.forest }}>{result}</Text> : null}
+        {failures.map((message, index) => (
+          <Text key={`${index}-${message}`} style={{ fontFamily: fonts.medium, color: colors.clay }}>{message}</Text>
+        ))}
       </View>
     </Screen>
   );

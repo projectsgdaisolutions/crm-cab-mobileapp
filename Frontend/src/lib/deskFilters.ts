@@ -14,7 +14,7 @@ export function matchesOnDate(value: string | undefined, day: string): boolean {
 }
 
 export function taskStats(tasks: TaskItem[], today: string): { open: number; dueToday: number; overdue: number } {
-  const openTasks = tasks.filter((task) => task.status !== 'Done');
+  const openTasks = tasks.filter((task) => task.status !== 'Completed');
   return {
     open: openTasks.length,
     dueToday: openTasks.filter((task) => task.dueDate === today).length,

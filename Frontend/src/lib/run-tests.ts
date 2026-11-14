@@ -58,6 +58,8 @@ check('normalizes Indian mobiles', () => {
 
 check('matches the last 10 digits', () => {
   assert.equal(phonesMatch('+91 98450 11220', '9845011220'), true);
+  assert.equal(phonesMatch('919845011220', '09845011220'), true);
+  assert.equal(phonesMatch('+91-98450-11220', '9845011220'), true);
   assert.equal(phonesMatch('9845011220', '9988776655'), false);
 });
 
@@ -189,7 +191,7 @@ check('filters a desk by day and counts open tasks', () => {
   const stats = taskStats(
     [
       { id: 'T-1', title: 'A', description: '', priority: 'High', status: 'Todo', dueDate: '2026-10-03', assignedTo: 'Priya', syncState: 'local' },
-      { id: 'T-2', title: 'B', description: '', priority: 'Low', status: 'Done', dueDate: '2026-10-03', assignedTo: 'Priya', syncState: 'local' },
+      { id: 'T-2', title: 'B', description: '', priority: 'Low', status: 'Completed', dueDate: '2026-10-03', assignedTo: 'Priya', syncState: 'local' },
       { id: 'T-3', title: 'C', description: '', priority: 'Medium', status: 'Review', dueDate: '2026-10-01', assignedTo: 'Priya', syncState: 'local' },
     ],
     '2026-10-03',

@@ -46,6 +46,7 @@ export const lightColors = {
   outlineBorder: '#E3E6F0',
   heroMuted: '#C9D0E4',
   overlay: 'rgba(14,36,32,0.45)',
+  shadow: 'rgba(27, 32, 48, 0.18)',
 };
 
 export type ColorTokens = typeof lightColors;
@@ -88,6 +89,7 @@ export const darkColors: ColorTokens = {
   outlineBorder: '#2C3346',
   heroMuted: '#A8B0C4',
   overlay: 'rgba(8,10,16,0.62)',
+  shadow: 'rgba(0, 0, 0, 0.45)',
 };
 
 /** Light palette kept for modules that read colors outside React. */

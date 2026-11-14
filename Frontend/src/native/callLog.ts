@@ -1,5 +1,5 @@
 import { requireOptionalNativeModule } from 'expo';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import type { DeviceCall } from '../lib/syncCalls';
 
 export interface DiscoveredRecording {
@@ -10,54 +10,96 @@ export interface DiscoveredRecording {
 }
 
 interface NativeCallSync {
-  getCallLogPermissionAsync(): Promise<{ status?: string; granted?: boolean }>;
-  requestCallLogPermissionAsync(): Promise<{ status?: string; granted?: boolean }>;
+  getCallLogPermissionAsync(): Promise<PermissionResult>;
+  requestCallLogPermissionAsync(): Promise<PermissionResult>;
   readCallLog(limit: number): Promise<Array<DeviceCall & { name?: string | null }>>;
   findRecordings(limit: number): Promise<DiscoveredRecording[]>;
 }
 
+type PermissionResult = {
+  status?: string;
+  granted?: boolean;
+  canAskAgain?: boolean;
+};
+
+export type CallLogPermissionState = 'granted' | 'denied' | 'permanently_denied' | 'unavailable';
+
 export interface CallLogAccess {
   available: boolean;
   granted: boolean;
+  canAskAgain: boolean;
+  state: CallLogPermissionState;
   detail: string;
 }
+
+const DEV_BUILD_DETAIL =
+  'Call log reading is included in the Android development build. Expo Go does not include the CallSync module. Install that build on the phone, then allow call logs.';
 
 function nativeModule(): NativeCallSync | null {
   if (Platform.OS !== 'android') return null;
   return requireOptionalNativeModule<NativeCallSync>('CallSync');
 }
 
-function granted(result: { status?: string; granted?: boolean } | null | undefined): boolean {
+function isGranted(result: PermissionResult | null | undefined): boolean {
   if (!result) return false;
   if (result.granted) return true;
   return result.status === 'granted';
 }
 
+function unavailable(detail: string): CallLogAccess {
+  return { available: false, granted: false, canAskAgain: false, state: 'unavailable', detail };
+}
+
+function fromPermission(result: PermissionResult | null | undefined): CallLogAccess {
+  if (isGranted(result)) {
+    return {
+      available: true,
+      granted: true,
+      canAskAgain: true,
+      state: 'granted',
+      detail: 'Call log permission granted.',
+    };
+  }
+  const canAskAgain = result?.canAskAgain !== false;
+  if (!canAskAgain) {
+    return {
+      available: true,
+      granted: false,
+      canAskAgain: false,
+      state: 'permanently_denied',
+      detail: 'Call log permission is blocked. Open Android settings for Vehico CRM and allow Phone and Call logs, then read the log again.',
+    };
+  }
+  return {
+    available: true,
+    granted: false,
+    canAskAgain: true,
+    state: 'denied',
+    detail: 'Call log permission was denied. Allow it to read recent calls from this phone.',
+  };
+}
+
+export function openCallLogSettings(): void {
+  void Linking.openSettings();
+}
+
 export async function inspectCallLogAccess(): Promise<CallLogAccess> {
   const native = nativeModule();
   if (!native) {
-    return {
-      available: false,
-      granted: false,
-      detail:
-        Platform.OS === 'android'
-          ? 'Call log reading ships in the Android development build. Expo Go does not include the CallSync module.'
-          : 'The handset call log is read on Android. This preview can still match a sample log against the desk.',
-    };
+    return unavailable(
+      Platform.OS === 'android'
+        ? DEV_BUILD_DETAIL
+        : 'Call history is read on an Android phone using the Vehico CRM development build.',
+    );
   }
   try {
-    const status = await native.getCallLogPermissionAsync();
-    return {
-      available: true,
-      granted: granted(status),
-      detail: granted(status)
-        ? 'Call log permission is on. Sync will read recent calls from this phone.'
-        : 'Allow call log access so completed calls can be matched to customers and leads.',
-    };
+    return fromPermission(await native.getCallLogPermissionAsync());
   } catch (error) {
     return {
       available: true,
       granted: false,
+      canAskAgain: true,
+      state: 'denied',
       detail: error instanceof Error ? error.message : 'Call log permission could not be checked.',
     };
   }
@@ -67,16 +109,15 @@ export async function requestCallLogAccess(): Promise<CallLogAccess> {
   const native = nativeModule();
   if (!native) return inspectCallLogAccess();
   try {
-    const status = await native.requestCallLogPermissionAsync();
-    return {
-      available: true,
-      granted: granted(status),
-      detail: granted(status) ? 'Call log permission granted.' : 'Call log permission was not granted.',
-    };
+    const access = fromPermission(await native.requestCallLogPermissionAsync());
+    console.log('[CALL LOG]', { state: access.state, available: access.available, granted: access.granted });
+    return access;
   } catch (error) {
     return {
       available: true,
       granted: false,
+      canAskAgain: true,
+      state: 'denied',
       detail: error instanceof Error ? error.message : 'Permission request failed.',
     };
   }
@@ -88,22 +129,32 @@ export async function readDeviceCallLog(limit = 40): Promise<{ calls: DeviceCall
     return {
       calls: [],
       source: 'unavailable',
-      detail: 'Device call log is not available in this runtime.',
+      detail: Platform.OS === 'android' ? DEV_BUILD_DETAIL : 'Call history is read on an Android phone using the Vehico CRM development build.',
     };
   }
-  const calls = await native.readCallLog(limit);
-  return {
-    calls: calls.map((call) => ({
+  try {
+    const calls = await native.readCallLog(limit);
+    const rows = calls.map((call) => ({
       number: call.number ?? '',
       name: call.name,
       direction: call.direction,
       status: call.status,
       startedAt: Number(call.startedAt),
       durationSec: Number(call.durationSec) || 0,
-    })),
-    source: 'device',
-    detail: `Read ${calls.length} recent calls from this phone.`,
-  };
+    }));
+    console.log('[CALL LOG]', { state: 'read', count: rows.length });
+    return {
+      calls: rows,
+      source: 'device',
+      detail: rows.length === 0 ? 'No recent calls were found on this phone.' : `Read ${rows.length} recent calls from this phone.`,
+    };
+  } catch (error) {
+    return {
+      calls: [],
+      source: 'unavailable',
+      detail: error instanceof Error ? error.message : 'The Android call log could not be read.',
+    };
+  }
 }
 
 export async function discoverRecordingFiles(limit = 40): Promise<DiscoveredRecording[]> {

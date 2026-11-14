@@ -18,9 +18,7 @@ export default function LoginScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 20 }]}>
       <View style={styles.brandCard}>
-        <Image source={require('../../../assets/vehicocrm-logo.jpg')} style={styles.logo} resizeMode="contain" accessibilityLabel="VehicoCRM" />
-        <Text style={styles.brand}>VehicoCRM</Text>
-        <Text style={styles.tagline}>Smart CRM for Vehicle Businesses</Text>
+        <Image source={require('../../../assets/vehicocrm-logo.jpg')} style={styles.logo} resizeMode="contain" accessibilityLabel="VehicoCRM, Smart CRM for Vehicle Businesses" />
       </View>
       <Text style={styles.word}>Welcome back</Text>
       <Text style={styles.lede}>Sign in with your CRM API account. Use the PHP email and password to load live desk data.</Text>
@@ -69,9 +67,7 @@ function makeStyles(colors: ColorTokens) {
       alignItems: 'center',
       marginBottom: 18,
     },
-    logo: { width: '100%', height: 108 },
-    brand: { color: '#0B2A6B', fontFamily: fonts.display, fontSize: 28, letterSpacing: 0.4, marginTop: 2 },
-    tagline: { color: '#F15A24', fontFamily: fonts.semibold, fontSize: 14, marginTop: 2, textAlign: 'center' },
+    logo: { width: '100%', height: 148 },
     word: { color: colors.ink, fontFamily: fonts.display, fontSize: 32, marginTop: 2 },
     lede: { color: colors.muted, fontFamily: fonts.medium, fontSize: 14, lineHeight: 21, marginTop: 6, marginBottom: 16 },
     card: { backgroundColor: colors.paper, borderRadius: 22, padding: 16 },

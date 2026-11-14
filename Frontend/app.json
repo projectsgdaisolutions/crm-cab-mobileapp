@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "vehicocrm",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gdaisolutions.vehicocrm"
@@ -54,7 +53,8 @@
           "enableBackgroundPlayback": false
         }
       ],
-      "./plugins/withDialerQueries.js"
+      "./plugins/withDialerQueries.js",
+      "expo-asset"
     ],
     "extra": {
       "description": "VehicoCRM — Smart CRM for Vehicle Businesses."

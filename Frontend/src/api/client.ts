@@ -79,6 +79,20 @@ type RequestOptions = {
 let unauthorizedHandler: (() => void) | null = null;
 let csrfRefreshHandler: ((csrfToken: string, user?: SessionUser) => void) | null = null;
 
+// One CSRF token for every unsafe request. Login sets it from POST /auth/login.php.
+// A later /auth/me.php response must not replace it.
+let activeCsrfToken: string | null = null;
+let csrfEpoch = 0;
+
+export function setActiveCsrfToken(token: string | null): void {
+  csrfEpoch += 1;
+  activeCsrfToken = token && token !== 'demo' ? token : null;
+}
+
+export function getActiveCsrfToken(): string | null {
+  return activeCsrfToken;
+}
+
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
@@ -87,8 +101,16 @@ export function setCsrfRefreshHandler(handler: ((csrfToken: string, user?: Sessi
   csrfRefreshHandler = handler;
 }
 
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ||
+  'https://vehicocrm.gdaisolutions.com/api';
+
+function resolveBase(base: string): string {
+  return base.trim() || API_BASE_URL;
+}
+
 function joinUrl(base: string, path: string): string {
-  const root = base.replace(/\/$/, '');
+  const root = resolveBase(base).replace(/\/$/, '');
   const suffix = path.startsWith('/') ? path : `/${path}`;
   return `${root}${suffix}`;
 }
@@ -109,12 +131,28 @@ function parseJson(text: string): unknown {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
 const PUBLIC_PATHS = new Set([
   '/auth/login.php',
   '/auth/forgot-password.php',
   '/auth/reset-password.php',
   '/auth/register.php',
 ]);
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function needsCsrf(method: string, path: string): boolean {
   const verb = method.toUpperCase();
@@ -123,13 +161,11 @@ function needsCsrf(method: string, path: string): boolean {
 }
 
 async function request<T>(base: string, path: string, options: RequestOptions = {}): Promise<T> {
-  if (!base.trim()) {
-    throw new ApiError('CRM API address is not configured.', 0, true);
-  }
+  const root = resolveBase(base);
   const method = (options.method ?? 'GET').toUpperCase();
   let url: URL;
   try {
-    url = new URL(joinUrl(base.trim(), path));
+    url = new URL(joinUrl(root, path));
   } catch {
     throw new ApiError('CRM API address is not a valid URL.', 0, true);
   }
@@ -140,9 +176,10 @@ async function request<T>(base: string, path: string, options: RequestOptions = 
     Accept: options.accept ?? 'application/json',
     'X-Client': 'gdai-cab-crm-web',
   };
-  if (needsCsrf(method, path) && options.csrfToken && options.csrfToken !== 'demo') {
-    headers['X-CSRF-Token'] = options.csrfToken;
-  }
+  const epochAtSend = csrfEpoch;
+  // Callers may still pass a token captured earlier. The header always comes from the active login token.
+  const headerToken = needsCsrf(method, path) && activeCsrfToken ? activeCsrfToken : null;
+  if (headerToken) headers['X-CSRF-Token'] = headerToken;
   let body: BodyInit | undefined;
   if (options.formData) {
     body = options.formData;
@@ -152,13 +189,22 @@ async function request<T>(base: string, path: string, options: RequestOptions = 
   }
   let response: Response;
   try {
-    response = await fetch(url.toString(), {
+    console.log('[API REQUEST DEBUG]', {
+      method,
+      url: url.toString(),
+      hasCsrfToken: Boolean(headerToken),
+      csrfHeaderPresent: Boolean(headers['X-CSRF-Token']),
+    });
+    response = await fetchWithTimeout(url.toString(), {
       method,
       headers,
       body,
       credentials: 'include',
     });
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new ApiError('The CRM API timed out.', 0, true);
+    }
     throw new ApiError('The CRM API could not be reached.', 0, true);
   }
   const text = await response.text();
@@ -166,17 +212,31 @@ async function request<T>(base: string, path: string, options: RequestOptions = 
 
   if (response.status === 401 && !PUBLIC_PATHS.has(path)) {
     const optionalAuth = path === '/mobile/devices.php' || path === '/notifications/index.php';
-    if (!optionalAuth) unauthorizedHandler?.();
+    // /auth/me.php is a session probe. Login and startup decide what to do with it,
+    // so a slow me response cannot clear a newer login.
+    const sessionProbe = path === '/auth/me.php';
+    if (!optionalAuth && !sessionProbe && epochAtSend === csrfEpoch) {
+      setActiveCsrfToken(null);
+      unauthorizedHandler?.();
+    }
     throw new ApiError(errorMessage(payload, 401), 401, false);
   }
 
   if (response.status === 419 && !options.retried && !PUBLIC_PATHS.has(path)) {
     try {
       const restored = await api.me(base);
-      csrfRefreshHandler?.(restored.csrfToken, restored.user);
-      return request<T>(base, path, { ...options, csrfToken: restored.csrfToken, retried: true });
+      if (epochAtSend === csrfEpoch && activeCsrfToken) {
+        csrfRefreshHandler?.(activeCsrfToken, restored.user);
+      }
+      return request<T>(base, path, { ...options, retried: true });
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) throw error;
+      if (error instanceof ApiError && error.status === 401) {
+        if (epochAtSend === csrfEpoch) {
+          setActiveCsrfToken(null);
+          unauthorizedHandler?.();
+        }
+        throw error;
+      }
       throw new ApiError(errorMessage(payload, 419), 419, false);
     }
   }
@@ -347,18 +407,21 @@ export const api = {
   },
 
   listRecordings: async (base: string) =>
-    mapList(await request(base, '/recordings/index.php'), (row) => fromApiRecording(row, base)),
+    mapList(await request(base, '/recordings/index.php'), (row) => fromApiRecording(row, resolveBase(base))),
 
   fetchRecordingMedia: async (base: string, id: string): Promise<string> => {
-    if (!base.trim()) throw new ApiError('CRM API address is not configured.', 0, true);
+    const root = resolveBase(base);
     let response: Response;
     try {
-      response = await fetch(joinUrl(base.trim(), `/recordings/media.php?id=${encodeURIComponent(id)}`), {
+      response = await fetchWithTimeout(joinUrl(root, `/recordings/media.php?id=${encodeURIComponent(id)}`), {
         method: 'GET',
         credentials: 'include',
         headers: { Accept: '*/*' },
       });
-    } catch {
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new ApiError('The CRM API timed out.', 0, true);
+      }
       throw new ApiError('The CRM API could not be reached.', 0, true);
     }
     if (response.status === 401) {
@@ -523,7 +586,7 @@ export const api = {
     const file = await filePart(input.uri, input.fileName, input.mimeType);
     form.append('file', file as Blob);
     const payload = await request(base, '/recordings/upload.php', { method: 'POST', csrfToken, formData: form });
-    return mapOne(payload, (row) => fromApiRecording(row, base));
+    return mapOne(payload, (row) => fromApiRecording(row, resolveBase(base)));
   },
 
   bulkSyncCalls: async (base: string, csrfToken: string, calls: CallRecord[]) => {

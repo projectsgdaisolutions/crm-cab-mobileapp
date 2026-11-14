@@ -80,7 +80,7 @@ export default function ProfileScreen() {
             <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{session?.mobile}</Text>
             <Text style={{ fontFamily: fonts.semibold, color: colors.forest, marginTop: 8 }}>{mode === 'api' ? 'Signed in with the CRM API' : 'Not signed in to the CRM API'}</Text>
           </Card>
-          <Field label="CRM API address" value={url} onChangeText={setUrl} placeholder="http://localhost:8000/api" keyboardType="default" />
+          <Field label="CRM API address" value={url} onChangeText={setUrl} placeholder="https://vehicocrm.gdaisolutions.com/api" keyboardType="default" />
           {saved ? <Text style={{ fontFamily: fonts.medium, color: colors.forest }}>{saved}</Text> : null}
           <Button
             label="Save API address"

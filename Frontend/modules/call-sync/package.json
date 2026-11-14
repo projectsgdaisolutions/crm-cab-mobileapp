@@ -1,0 +1,11 @@
+{
+  "name": "call-sync",
+  "version": "0.1.0",
+  "description": "Android call log reader for Vehico CRM",
+  "main": "src/CallSyncModule.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

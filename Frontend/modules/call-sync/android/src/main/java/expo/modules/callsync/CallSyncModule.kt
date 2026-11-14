@@ -72,7 +72,8 @@ class CallSyncModule : Module() {
             else -> "outgoing"
           }
           val status = when (type) {
-            CallLog.Calls.MISSED_TYPE, CallLog.Calls.REJECTED_TYPE, CallLog.Calls.BLOCKED_TYPE -> "Missed"
+            CallLog.Calls.MISSED_TYPE -> "Missed"
+            CallLog.Calls.REJECTED_TYPE, CallLog.Calls.BLOCKED_TYPE -> "Rejected"
             else -> if (duration > 0) "Answered" else "Failed"
           }
           rows.add(

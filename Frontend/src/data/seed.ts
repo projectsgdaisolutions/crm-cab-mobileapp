@@ -759,43 +759,5 @@ export function createSeed(now = new Date()): AppData {
         syncState: 'local',
       },
     ],
-    drivers: [
-      {
-        id: 'D-12',
-        name: 'Rafiq Khan',
-        mobile: '+91 98220 11001',
-        license: 'MH01 2024 1188',
-        city: 'Mumbai',
-        status: 'Active',
-        syncState: 'synced',
-      },
-      {
-        id: 'D-18',
-        name: 'Suresh',
-        mobile: '+91 98111 44002',
-        license: 'MH02 2023 7741',
-        city: 'Mumbai',
-        status: 'Active',
-        syncState: 'synced',
-      },
-    ],
-    vehicles: [
-      {
-        id: 'V-21',
-        number: 'MH01 AB 2210',
-        type: 'Sedan',
-        model: 'Swift Dzire',
-        status: 'Active',
-        syncState: 'synced',
-      },
-      {
-        id: 'V-24',
-        number: 'MH02 CD 4481',
-        type: 'Innova',
-        model: 'Innova Crysta',
-        status: 'Active',
-        syncState: 'synced',
-      },
-    ],
   };
 }

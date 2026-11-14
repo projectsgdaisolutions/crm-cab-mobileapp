@@ -77,7 +77,25 @@ export async function saveThemePreference(value: 'light' | 'dark' | 'system'): P
   await AsyncStorage.setItem(THEME_KEY, value);
 }
 
-export async function saveSession(session: StoredSession | null): Promise<void> {
+let newestSessionGeneration = Number.NEGATIVE_INFINITY;
+let sessionWriteQueue: Promise<void> = Promise.resolve();
+
+export function saveSession(session: StoredSession | null, generation = Number.POSITIVE_INFINITY): Promise<void> {
+  if (generation < newestSessionGeneration) return Promise.resolve();
+  newestSessionGeneration = Math.max(newestSessionGeneration, generation);
+  const savedGeneration = generation;
+  const run = sessionWriteQueue.then(async () => {
+    if (savedGeneration < newestSessionGeneration) return;
+    await writeSession(session);
+  });
+  sessionWriteQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+async function writeSession(session: StoredSession | null): Promise<void> {
   if (!session) {
     await AsyncStorage.removeItem(SESSION_KEY);
     if (Platform.OS !== 'web') {

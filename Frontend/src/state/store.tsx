@@ -1,10 +1,11 @@
 import Constants from 'expo-constants';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
-import { ApiError, api, pullDesk, setCsrfRefreshHandler, setUnauthorizedHandler } from '../api/client';
+import { API_BASE_URL, ApiError, api, getActiveCsrfToken, pullDesk, setActiveCsrfToken, setCsrfRefreshHandler, setUnauthorizedHandler } from '../api/client';
 import type { MapperContext } from '../api/mappers';
 import { toDriverVehicle } from '../api/mappers';
 import { makeId } from '../lib/ids';
+import { phonesMatch } from '../lib/phone';
 import { nextFollowUpForLead } from '../lib/scheduleSync';
 import type { DeviceCall } from '../lib/syncCalls';
 import { loadApiBase, loadDesk, loadDeviceToken, loadSession, saveApiBase, saveDesk, saveDeviceToken, saveSession } from '../storage/persist';
@@ -53,6 +54,15 @@ export interface DispositionInput {
   };
 }
 
+export interface ImportDeviceCallsResult {
+  added: number;
+  leads: number;
+  synced: number;
+  failed: number;
+  skipped: number;
+  errors: string[];
+}
+
 interface StoreValue {
   ready: boolean;
   session: SessionUser | null;
@@ -92,7 +102,7 @@ interface StoreValue {
   loadPermissions: () => Promise<RolePermission[]>;
   savePermission: (input: { role: string; permissionKey: string; allowed: boolean }) => Promise<RolePermission>;
   exportReport: (query: { resource: string; dateFrom?: string; dateTo?: string }) => Promise<string>;
-  importDeviceCalls: (calls: Array<DeviceCall & { entityType?: EntityType; entityId?: string; entityName?: string; duplicate: boolean }>, createUnknown: boolean) => Promise<{ added: number; leads: number }>;
+  importDeviceCalls: (calls: Array<DeviceCall & { entityType?: EntityType; entityId?: string; entityName?: string; duplicate: boolean }>, createUnknown: boolean) => Promise<ImportDeviceCallsResult>;
   attachRecording: (input: {
     callId?: string;
     entityType?: EntityType;
@@ -108,7 +118,7 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-const envBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
+const DEFAULT_API_BASE = API_BASE_URL;
 
 function actorName(session: SessionUser | null): string {
   return session?.name ?? 'User';
@@ -195,7 +205,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionUser | null>(null);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [data, setData] = useState<AppData>(() => emptyDesk());
-  const [apiBase, setApiBaseState] = useState(envBase);
+  const [apiBase, setApiBaseState] = useState(DEFAULT_API_BASE);
   const [notice, setNotice] = useState<string | null>(null);
   const [pendingCall, setPendingCall] = useState<PendingCall | null>(null);
   const [awaitingReturn, setAwaitingReturn] = useState<PendingCall | null>(null);
@@ -203,9 +213,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const sessionRef = useRef(session);
   const csrfRef = useRef(csrfToken);
   const apiRef = useRef(apiBase);
+  const sessionGeneration = useRef(0);
   dataRef.current = data;
   sessionRef.current = session;
-  csrfRef.current = csrfToken;
+  csrfRef.current = getActiveCsrfToken();
   apiRef.current = apiBase;
 
   const contextOf = useCallback((): MapperContext => ({
@@ -217,27 +228,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     followUps: dataRef.current.followUps,
   }), []);
 
-  const applySession = useCallback(async (user: SessionUser | null, csrf: string | null) => {
+  const applySession = useCallback(async (user: SessionUser | null, csrf: string | null, generation: number) => {
+    if (generation !== sessionGeneration.current) return;
     setSession(user);
     setCsrfToken(csrf);
     sessionRef.current = user;
     csrfRef.current = csrf;
-    if (user && csrf) await saveSession({ csrfToken: csrf, user });
-    else await saveSession(null);
+    setActiveCsrfToken(csrf);
+    if (generation !== sessionGeneration.current) return;
+    if (user && csrf) await saveSession({ csrfToken: csrf, user }, generation);
+    else await saveSession(null, generation);
   }, []);
 
   const live = useCallback(() => {
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     return Boolean(base && csrf && csrf !== 'demo');
   }, []);
 
   const requireApi = useCallback(() => {
-    const base = (apiRef.current || envBase).trim();
-    const csrf = csrfRef.current;
-    if (!base) {
-      throw new Error('CRM API address is missing. Set http://localhost:8000/api in Profile, then sign in.');
-    }
+    const base = apiRef.current.trim() || DEFAULT_API_BASE;
+    const csrf = getActiveCsrfToken();
     if (!csrf || csrf === 'demo') {
       throw new Error('Sign in to the CRM API first. Open login and use your PHP email and password.');
     }
@@ -272,30 +283,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const generation = sessionGeneration.current;
     let cancelled = false;
     (async () => {
       const [storedBase, storedSession, storedDesk] = await Promise.all([loadApiBase(), loadSession(), loadDesk()]);
       if (cancelled) return;
-      const base = (storedBase && storedBase.trim()) || envBase;
-      setApiBaseState(base);
-      apiRef.current = base;
+      const finalBase =
+        storedBase?.trim() || DEFAULT_API_BASE;
+      setApiBaseState(finalBase);
+      apiRef.current = finalBase;
+      if (sessionGeneration.current !== generation) {
+        setReady(true);
+        return;
+      }
       const session = storedSession && storedSession.csrfToken !== 'demo' ? storedSession : null;
-      if (!session || !base.trim()) {
-        await saveSession(null);
+      if (!session || !finalBase.trim()) {
+        await saveSession(null, generation);
+        if (cancelled || sessionGeneration.current !== generation) {
+          if (!cancelled) setReady(true);
+          return;
+        }
         commit(emptyDesk());
-        if (!cancelled) setReady(true);
+        setReady(true);
         return;
       }
       try {
-        const me = await api.me(base);
-        if (cancelled) return;
-        setSession(me.user);
-        setCsrfToken(me.csrfToken);
-        sessionRef.current = me.user;
-        csrfRef.current = me.csrfToken;
-        await saveSession({ csrfToken: me.csrfToken, user: me.user });
-        const remote = await pullDesk(base, storedDesk ? completeDesk(storedDesk) : emptyDesk());
-        if (cancelled) return;
+        const me = await api.me(finalBase);
+        if (cancelled || sessionGeneration.current !== generation) {
+          if (!cancelled) setReady(true);
+          return;
+        }
+        await applySession(me.user, session.csrfToken, generation);
+        if (cancelled || sessionGeneration.current !== generation) {
+          if (!cancelled) setReady(true);
+          return;
+        }
+        const remote = await pullDesk(finalBase, storedDesk ? completeDesk(storedDesk) : emptyDesk());
+        if (cancelled || sessionGeneration.current !== generation) {
+          if (!cancelled) setReady(true);
+          return;
+        }
         commit({
           ...emptyDesk(),
           ...remote,
@@ -309,7 +336,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
         try {
           const token = await ensureDeviceToken();
-          await api.registerDevice(base, me.csrfToken, {
+          const csrf = getActiveCsrfToken();
+          if (sessionGeneration.current !== generation || !csrf) {
+            if (!cancelled) setReady(true);
+            return;
+          }
+          await api.registerDevice(finalBase, csrf, {
             deviceToken: token,
             platform: Platform.OS,
             appVersion: appVersion(),
@@ -317,23 +349,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         } catch {
           // Device registration is optional on resume.
         }
+        if (cancelled || sessionGeneration.current !== generation) {
+          if (!cancelled) setReady(true);
+          return;
+        }
         try {
-          const alerts = await api.listNotifications(base);
+          const alerts = await api.listNotifications(finalBase);
+          if (sessionGeneration.current !== generation) {
+            setReady(true);
+            return;
+          }
           if (alerts.unreadCount > 0) {
             setNotice(`${alerts.unreadCount} unread CRM notification${alerts.unreadCount === 1 ? '' : 's'}.`);
           } else {
             setNotice(null);
           }
         } catch {
-          setNotice(null);
+          if (sessionGeneration.current === generation) setNotice(null);
         }
       } catch {
-        if (cancelled) return;
-        await saveSession(null);
-        setSession(null);
-        setCsrfToken(null);
-        sessionRef.current = null;
-        csrfRef.current = null;
+        if (cancelled || sessionGeneration.current !== generation) {
+          if (!cancelled) setReady(true);
+          return;
+        }
+        await applySession(null, null, generation);
         commit(emptyDesk());
       }
       if (!cancelled) setReady(true);
@@ -341,7 +380,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [commit]);
+  }, [applySession, commit]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -357,16 +396,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      void applySession(null, null);
+      const generation = ++sessionGeneration.current;
+      setActiveCsrfToken(null);
+      void applySession(null, null, generation);
     });
-    setCsrfRefreshHandler((nextCsrf, nextUser) => {
-      csrfRef.current = nextCsrf;
-      setCsrfToken(nextCsrf);
-      if (nextUser) {
-        sessionRef.current = nextUser;
-        setSession(nextUser);
-        void saveSession({ csrfToken: nextCsrf, user: nextUser });
-      }
+    setCsrfRefreshHandler((_keptToken, nextUser) => {
+      const csrf = getActiveCsrfToken();
+      const generation = sessionGeneration.current;
+      if (!csrf || !nextUser || generation !== sessionGeneration.current) return;
+      csrfRef.current = csrf;
+      setCsrfToken(csrf);
+      sessionRef.current = nextUser;
+      setSession(nextUser);
+      void saveSession({ csrfToken: csrf, user: nextUser }, generation);
     });
     return () => {
       setUnauthorizedHandler(null);
@@ -375,18 +417,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [applySession]);
 
   const login = useCallback(async (identifier: string, password: string) => {
-    const base = apiRef.current.trim();
-    if (!base) throw new Error('Set the CRM API address in Profile. This app signs in only through the PHP API.');
+    const generation = ++sessionGeneration.current;
+    const base = apiRef.current.trim() || DEFAULT_API_BASE;
     const result = await api.login(base, identifier.trim(), password);
-    await applySession(result.user, result.csrfToken);
+    if (sessionGeneration.current !== generation) return;
+    await applySession(result.user, result.csrfToken, generation);
     try {
       const me = await api.me(base);
-      await applySession(me.user, me.csrfToken);
+      if (sessionGeneration.current !== generation) return;
+      await applySession(me.user, result.csrfToken, generation);
     } catch {
-      await applySession(null, null);
-      throw new Error('PHP login succeeded but the session cookie was not kept. Use http://localhost:43123 for the app and http://localhost:8000/api for PHP, then sign in again.');
+      if (sessionGeneration.current !== generation) return;
+      await applySession(null, null, generation);
+      throw new Error('Login succeeded, but the session cookie was not kept. Sign in again.');
     }
+    if (sessionGeneration.current !== generation) return;
     const remote = await pullDesk(base, emptyDesk());
+    if (sessionGeneration.current !== generation) return;
     commit({
       ...emptyDesk(),
       ...remote,
@@ -400,7 +447,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
     try {
       const token = await ensureDeviceToken();
-      await api.registerDevice(base, csrfRef.current || result.csrfToken, {
+      if (sessionGeneration.current !== generation) return;
+      await api.registerDevice(base, result.csrfToken, {
         deviceToken: token,
         platform: Platform.OS,
         appVersion: appVersion(),
@@ -408,16 +456,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       // Device registration is optional if that PHP route is not deployed.
     }
+    if (sessionGeneration.current !== generation) return;
     try {
       const alerts = await api.listNotifications(base);
+      if (sessionGeneration.current !== generation) return;
       if (alerts.unreadCount > 0) {
         setNotice(`${alerts.unreadCount} unread CRM notification${alerts.unreadCount === 1 ? '' : 's'}.`);
       }
     } catch {
       // Notifications are optional.
     }
-    if (!csrfRef.current || csrfRef.current === 'demo') {
-      await applySession(result.user, result.csrfToken);
+    if (sessionGeneration.current !== generation) return;
+    if (getActiveCsrfToken() !== result.csrfToken) {
+      await applySession(sessionRef.current ?? result.user, result.csrfToken, generation);
     }
   }, [applySession, commit]);
 
@@ -431,14 +482,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const generation = sessionGeneration.current;
+    const csrf = getActiveCsrfToken();
     if (!base || !csrf || csrf === 'demo') {
       throw new Error('Sign in with the CRM API to change the password.');
     }
     await api.changePassword(base, csrf, currentPassword, newPassword);
     try {
       const me = await api.me(base);
-      await applySession(me.user, me.csrfToken);
+      if (sessionGeneration.current !== generation) return;
+      await applySession(me.user, csrf, generation);
     } catch {
       // Password already changed; session refresh is best-effort.
     }
@@ -446,10 +499,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const updateAdminProfile = useCallback(async (input: { name: string; email: string; phone?: string; timezone?: string; bio?: string }) => {
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const generation = sessionGeneration.current;
+    const csrf = getActiveCsrfToken();
     if (!base || !csrf || csrf === 'demo') throw new Error('Sign in with the CRM API to update the profile.');
     const user = await api.updateProfile(base, csrf, input);
-    await applySession(user, csrf);
+    if (sessionGeneration.current !== generation) return user;
+    await applySession(user, csrf, generation);
     return user;
   }, [applySession]);
 
@@ -461,7 +516,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const savePreferences = useCallback(async (prefs: Record<string, unknown>) => {
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (!base || !csrf || csrf === 'demo') return prefs;
     return api.savePreferences(base, csrf, prefs);
   }, []);
@@ -477,8 +532,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [live]);
 
   const logout = useCallback(async () => {
+    const generation = ++sessionGeneration.current;
     const base = apiRef.current.trim();
-    const current = csrfRef.current;
+    const current = getActiveCsrfToken();
     if (base && current && current !== 'demo') {
       try {
         const token = await loadDeviceToken();
@@ -492,7 +548,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // Local sign-out still proceeds when the API is down.
       }
     }
-    await applySession(null, null);
+    if (sessionGeneration.current === generation) {
+      await applySession(null, null, generation);
+    }
     setPendingCall(null);
     setAwaitingReturn(null);
   }, [applySession]);
@@ -507,7 +565,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     const base = apiRef.current.trim();
-    const current = csrfRef.current;
+    const current = getActiveCsrfToken();
     if (!base || !current || current === 'demo') {
       throw new Error('Sign in to the CRM API to refresh the desk.');
     }
@@ -609,7 +667,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
     }
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const result = await push(() => api.saveCall(base, csrf, stored));
       if (result.ok) {
@@ -665,7 +723,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     });
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const result = await push(() => api.saveCustomer(base, csrf, row, creating, contextOf()));
       if (result.ok) {
@@ -699,7 +757,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     });
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const converting = !creating && input.status === 'Converted';
       const result = converting
@@ -748,7 +806,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ),
     );
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const result = await push(() => api.saveNote(base, csrf, row, contextOf()));
       if (result.ok) {
@@ -782,7 +840,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     });
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const result = await push(() => api.saveFollowUp(base, csrf, row, creating, contextOf()));
       if (result.ok) {
@@ -810,7 +868,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     });
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const result = await push(() => api.saveBooking(base, csrf, row, creating));
       if (result.ok) {
@@ -849,7 +907,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     });
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const previous = dataRef.current.executives.find((item) => item.id === input.id);
       const deactivating = !creating && previous?.active && !row.active;
@@ -884,7 +942,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     });
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo') {
       const result = await push(() => api.saveTask(base, csrf, row, creating, contextOf()));
       if (result.ok) {
@@ -905,46 +963,80 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [addActivity, contextOf, patch]);
 
   const importDeviceCalls = useCallback(async (
-    calls: Array<DeviceCall & { entityType?: EntityType; entityId?: string; entityName?: string; duplicate: boolean }>,
+    calls: Array<DeviceCall & {
+      entityType?: EntityType;
+      entityId?: string;
+      entityName?: string;
+      duplicate: boolean;
+    }>,
     createUnknown: boolean,
   ) => {
     requireApi();
+
     const fresh = calls.filter((call) => !call.duplicate && call.number);
+
     let added = 0;
     let leads = 0;
+    let synced = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    let skipped = calls.filter((call) => call.duplicate || !call.number).length;
+
     const now = new Date().toISOString();
     const createdBy = actorName(sessionRef.current);
+
+    // Keep the exact records created by this import.
+    const createdLeads: Lead[] = [];
+    const importedCallIds: string[] = [];
+
     patch((current) => {
       let next = current;
       const imported: CallRecord[] = [];
+
       fresh.forEach((call) => {
         let entityType = call.entityType;
         let entityId = call.entityId;
         let name = call.entityName || call.name || 'Unknown';
+
         if (!entityId && createUnknown) {
-          const lead: Lead = {
-            id: makeId('L'),
-            name: call.name?.trim() || 'Unknown caller',
-            mobile: call.number,
-            requirement: 'Created from an unmatched incoming call',
-            pickup: 'To be confirmed',
-            drop: 'To be confirmed',
-            travelDate: now.slice(0, 10),
-            travelTime: '10:00',
-            source: 'Incoming call',
-            assignedTo: createdBy,
-            status: 'New' as LeadStatus,
-            priority: 'Medium',
-            createdAt: now,
-            updatedAt: now,
-            syncState: 'local',
-          };
-          next = { ...next, leads: [lead, ...next.leads] };
-          entityType = 'lead';
-          entityId = lead.id;
-          name = lead.name;
-          leads += 1;
+          const existingCreated = createdLeads.find((item) => phonesMatch(item.mobile, call.number));
+          if (existingCreated) {
+            entityType = 'lead';
+            entityId = existingCreated.id;
+            name = existingCreated.name;
+          } else {
+            const lead: Lead = {
+              id: makeId('L'),
+              name: call.name?.trim() || 'Unknown caller',
+              mobile: call.number,
+              requirement: 'Created from an unmatched incoming call',
+              pickup: 'To be confirmed',
+              drop: 'To be confirmed',
+              travelDate: now.slice(0, 10),
+              travelTime: '10:00',
+              source: 'Incoming call',
+              assignedTo: createdBy,
+              status: 'New' as LeadStatus,
+              priority: 'Medium',
+              createdAt: now,
+              updatedAt: now,
+              syncState: 'local',
+            };
+
+            createdLeads.push(lead);
+
+            next = {
+              ...next,
+              leads: [lead, ...next.leads],
+            };
+
+            entityType = 'lead';
+            entityId = lead.id;
+            name = lead.name;
+            leads += 1;
+          }
         }
+
         const row: CallRecord = {
           id: makeId('CALL'),
           entityType,
@@ -959,60 +1051,183 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncState: 'local',
           createdBy,
         };
+
         imported.push(row);
+        importedCallIds.push(row.id);
         added += 1;
+
         if (entityType && entityId) {
           next = addActivity(next, {
             entityType,
             entityId,
             type: 'Phone Call',
             at: row.startedAt,
-            remarks: `${row.direction === 'incoming' ? 'Incoming' : 'Outgoing'} ${row.status.toLowerCase()} call synced from the handset.`,
+            remarks: `${
+              row.direction === 'incoming' ? 'Incoming' : 'Outgoing'
+            } ${row.status.toLowerCase()} call synced from the handset.`,
           });
         }
       });
-      return { ...next, calls: [...imported, ...next.calls] };
+
+      return {
+        ...next,
+        calls: [...imported, ...next.calls],
+      };
     });
+
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
+
     if (base && csrf && csrf !== 'demo' && added > 0) {
-      const pendingLeads = dataRef.current.leads.filter((item) => item.syncState !== 'synced').slice(0, leads);
-      for (const lead of pendingLeads) {
-        const saved = await push(() => api.saveLead(base, csrf, lead, true, contextOf()));
-        if (saved.ok) {
-          patch((current) => ({
-            ...current,
-            leads: current.leads.map((item) => (item.id === lead.id ? withSync(saved.value, 'synced') : item)),
-            calls: current.calls.map((item) => (item.entityId === lead.id ? { ...item, entityId: saved.value.id } : item)),
-          }));
+      const failedLeadIds = new Set<string>();
+
+      // STEP 1: Save only the Leads created by this import.
+      for (const lead of createdLeads) {
+        const saved = await push(() =>
+          api.saveLead(base, csrf, lead, true, contextOf())
+        );
+
+        if (!saved.ok) {
+          failedLeadIds.add(lead.id);
+          errors.push(`Lead save failed: ${saved.error.message}`);
+          setNotice(`Lead save failed: ${saved.error.message}`);
+          continue;
         }
-      }
-      const pending = dataRef.current.calls.filter((call) => call.syncState !== 'synced' && call.entityType && call.entityId).slice(0, added);
-      const bulk = await push(() => api.bulkSyncCalls(base, csrf, pending));
-      if (bulk.ok) {
+
+        const serverLead = withSync(saved.value, 'synced');
+        const serverLeadId = String(serverLead.id);
+
+        // Never send a local ID or invalid ID to the Calls API.
+        if (!/^[1-9]\d*$/.test(serverLeadId)) {
+          failedLeadIds.add(lead.id);
+          const message = `Lead "${lead.name}" was saved, but the API did not return a valid numeric database ID.`;
+          errors.push(message);
+          setNotice(message);
+          continue;
+        }
+
+        // STEP 2: Replace the local Lead ID with the server database ID.
         patch((current) => ({
           ...current,
-          calls: current.calls.map((item) => {
-            const matched = bulk.value.find((row) => row.id === item.id || (row.mobile === item.mobile && row.startedAt === item.startedAt));
-            return matched ? withSync(matched, 'synced') : item.entityType && pending.some((call) => call.id === item.id) ? withSync(item, 'synced') : item;
-          }),
+
+          leads: current.leads.map((item) =>
+            item.id === lead.id ? serverLead : item
+          ),
+
+          calls: current.calls.map((item) =>
+            item.entityType === 'lead' && item.entityId === lead.id
+              ? { ...item, entityId: serverLeadId }
+              : item
+          ),
+
+          activities: current.activities.map((item) =>
+            item.entityType === 'lead' && item.entityId === lead.id
+              ? { ...item, entityId: serverLeadId }
+              : item
+          ),
         }));
-      } else {
-        for (const call of pending) {
-          const result = await push(() => api.saveCall(base, csrf, call));
-          if (result.ok) {
-            patch((current) => ({
-              ...current,
-              calls: current.calls.map((item) => (item.id === call.id ? withSync(result.value, 'synced') : item)),
-            }));
-          } else {
-            setNotice(result.error.message);
-            break;
+      }
+
+      // STEP 3: Select only Calls created during this import.
+      const importedIdSet = new Set(importedCallIds);
+
+      const importedCalls = dataRef.current.calls.filter(
+        (call) => importedIdSet.has(call.id)
+      );
+
+      // STEP 4: Only synchronize Calls with valid numeric server IDs.
+      const pending = importedCalls.filter((call) => {
+        if (!call.entityType || !call.entityId) return false;
+
+        const relatedId = String(call.entityId);
+
+        if (!/^[1-9]\d*$/.test(relatedId)) return false;
+
+        // Do not sync a Call if its newly created Lead failed to save.
+        if (failedLeadIds.has(relatedId)) return false;
+
+        return true;
+      });
+
+      const invalidCalls = importedCalls.filter(
+        (call) =>
+          call.entityType &&
+          call.entityId &&
+          !/^[1-9]\d*$/.test(String(call.entityId))
+      );
+      const unmatchedCalls = importedCalls.filter((call) => !call.entityType || !call.entityId);
+      skipped += invalidCalls.length + unmatchedCalls.length;
+
+      if (invalidCalls.length > 0) {
+        const message = `${invalidCalls.length} call(s) could not sync because their related Lead or Customer does not have a numeric server ID.`;
+        errors.push(message);
+        setNotice(message);
+      }
+      if (unmatchedCalls.length > 0) {
+        errors.push(`${unmatchedCalls.length} call(s) stayed unmatched and were not sent.`);
+      }
+
+      // STEP 5: Bulk sync only valid imported Calls.
+      if (pending.length > 0) {
+        const bulk = await push(() =>
+          api.bulkSyncCalls(base, csrf, pending)
+        );
+
+        if (bulk.ok) {
+          // The bulk endpoint accepted the submitted batch.
+          // Do not mark unrelated pending Calls as synced.
+          const syncedIds = new Set(pending.map((call) => call.id));
+          synced += pending.length;
+
+          patch((current) => ({
+            ...current,
+            calls: current.calls.map((item) =>
+              syncedIds.has(item.id)
+                ? withSync(item, 'synced')
+                : item
+            ),
+          }));
+        } else {
+          errors.push(bulk.error.message);
+          // STEP 6: Try individual synchronization if bulk sync fails.
+          for (const call of pending) {
+            const result = await push(() =>
+              api.saveCall(base, csrf, call)
+            );
+
+            if (result.ok) {
+              synced += 1;
+              patch((current) => ({
+                ...current,
+                calls: current.calls.map((item) =>
+                  item.id === call.id
+                    ? withSync(result.value, 'synced')
+                    : item
+                ),
+              }));
+            } else {
+              failed += 1;
+              errors.push(result.error.message);
+              patch((current) => ({
+                ...current,
+                calls: current.calls.map((item) =>
+                  item.id === call.id
+                    ? withSync(item, 'failed')
+                    : item
+                ),
+              }));
+
+              setNotice(result.error.message);
+            }
           }
         }
       }
+    } else if (added > 0) {
+      skipped += added;
+      errors.push('Sign in to the CRM API before syncing calls.');
     }
-    return { added, leads };
+
+    return { added, leads, synced, failed, skipped, errors };
   }, [addActivity, contextOf, patch]);
 
   const attachRecording = useCallback(async (input: {
@@ -1049,7 +1264,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         : current.calls,
     }));
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (base && csrf && csrf !== 'demo' && input.callId) {
       const uploaded = await push(() =>
         api.uploadRecording(base, csrf, {
@@ -1126,7 +1341,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const savePermission = useCallback(async (input: { role: string; permissionKey: string; allowed: boolean }) => {
     const base = apiRef.current.trim();
-    const csrf = csrfRef.current;
+    const csrf = getActiveCsrfToken();
     if (!base || !csrf || csrf === 'demo') throw new Error('Sign in with the CRM API to change permissions.');
     return api.savePermission(base, csrf, input);
   }, []);
