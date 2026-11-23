@@ -17,7 +17,8 @@
         "android.permission.READ_CALL_LOG",
         "android.permission.READ_PHONE_STATE",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_AUDIO"
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#17352F",
@@ -57,7 +58,11 @@
       "expo-asset"
     ],
     "extra": {
-      "description": "VehicoCRM — Smart CRM for Vehicle Businesses."
+      "description": "VehicoCRM — Smart CRM for Vehicle Businesses.",
+      "router": {},
+      "eas": {
+        "projectId": "3754e332-0f93-4e6e-8aef-ce3785ed0e85"
+      }
     }
   }
 }
