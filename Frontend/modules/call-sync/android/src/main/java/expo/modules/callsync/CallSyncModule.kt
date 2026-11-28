@@ -115,7 +115,7 @@ class CallSyncModule : Module() {
           found.add(
             mapOf(
               "fileName" to file.name,
-              "uri" to file.absolutePath,
+              "uri" to "file://${file.absolutePath}",
               "size" to file.length(),
               "modifiedAt" to file.lastModified()
             )

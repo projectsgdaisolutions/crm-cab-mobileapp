@@ -103,7 +103,7 @@ export default function RecordingsScreen() {
             if (result.canceled || !result.assets[0]) return;
             const asset = result.assets[0];
             const latest = data.calls[0];
-            await attachRecording({
+            const saved = await attachRecording({
               callId: latest?.id,
               entityType: latest?.entityType,
               entityId: latest?.entityId,
@@ -111,9 +111,13 @@ export default function RecordingsScreen() {
               mobile: latest?.mobile ?? '',
               uri: asset.uri,
               fileName: asset.name,
-              mimeType: asset.mimeType,
+              mimeType: asset.mimeType ?? undefined,
             });
-            setMessage(`Attached ${asset.name}.`);
+            setMessage(
+              saved.availability === 'uploaded'
+                ? `Uploaded ${asset.name}.`
+                : saved.note || `Could not upload ${asset.name}.`,
+            );
           }}
           style={{ backgroundColor: colors.forestFill, borderRadius: 14, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}
         >

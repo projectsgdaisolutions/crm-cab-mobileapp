@@ -1,3 +1,5 @@
+import { File as ExpoFile, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
 import type {
   Activity,
   AppData,
@@ -74,6 +76,7 @@ type RequestOptions = {
   retried?: boolean;
   accept?: string;
   raw?: boolean;
+  timeoutMs?: number;
 };
 
 let unauthorizedHandler: (() => void) | null = null;
@@ -144,9 +147,9 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
@@ -195,12 +198,16 @@ async function request<T>(base: string, path: string, options: RequestOptions = 
       hasCsrfToken: Boolean(headerToken),
       csrfHeaderPresent: Boolean(headers['X-CSRF-Token']),
     });
-    response = await fetchWithTimeout(url.toString(), {
-      method,
-      headers,
-      body,
-      credentials: 'include',
-    });
+    response = await fetchWithTimeout(
+      url.toString(),
+      {
+        method,
+        headers,
+        body,
+        credentials: 'include',
+      },
+      options.timeoutMs,
+    );
   } catch (error) {
     if (isAbortError(error)) {
       throw new ApiError('The CRM API timed out.', 0, true);
@@ -584,8 +591,13 @@ export const api = {
     form.append('accessLevel', input.accessLevel ?? 'Admin');
     if (input.durationSec != null) form.append('durationSec', String(input.durationSec));
     const file = await filePart(input.uri, input.fileName, input.mimeType);
-    form.append('file', file as Blob);
-    const payload = await request(base, '/recordings/upload.php', { method: 'POST', csrfToken, formData: form });
+    form.append('file', file as Blob, input.fileName);
+    const payload = await request(base, '/recordings/upload.php', {
+      method: 'POST',
+      csrfToken,
+      formData: form,
+      timeoutMs: 120_000,
+    });
     return mapOne(payload, (row) => fromApiRecording(row, resolveBase(base)));
   },
 
@@ -632,16 +644,68 @@ export const api = {
   getReports: async (base: string) => dataOf(await request(base, '/reports/index.php')),
 };
 
-async function filePart(uri: string, fileName: string, mimeType?: string): Promise<Blob | { uri: string; name: string; type: string }> {
-  if (uri.startsWith('blob:') || uri.startsWith('http') || uri.startsWith('data:')) {
+function mimeFromName(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'mp3':
+      return 'audio/mpeg';
+    case 'm4a':
+    case 'mp4':
+      return 'audio/mp4';
+    case 'wav':
+      return 'audio/wav';
+    case 'aac':
+      return 'audio/aac';
+    case 'amr':
+      return 'audio/amr';
+    case 'ogg':
+      return 'audio/ogg';
+    case '3gp':
+      return 'audio/3gpp';
+    default:
+      return 'audio/mpeg';
+  }
+}
+
+function safeFileName(fileName: string): string {
+  const base = fileName.split(/[/\\]/).pop() || 'recording.m4a';
+  const cleaned = base.replace(/[^\w.\-]+/g, '_').replace(/^\.+/, '');
+  return cleaned || `recording-${Date.now()}.m4a`;
+}
+
+async function readableNativeFile(uri: string, fileName: string): Promise<ExpoFile> {
+  const normalized = uri.startsWith('/') ? `file://${uri}` : uri;
+  let source = new ExpoFile(normalized);
+  if (!source.exists || source.size <= 0) {
+    const dest = new ExpoFile(Paths.cache, safeFileName(fileName));
+    if (dest.exists) dest.delete();
+    await source.copy(dest);
+    source = dest;
+  }
+  if (!source.exists || source.size <= 0) {
+    throw new ApiError('The recording file could not be read on this phone.');
+  }
+  return source;
+}
+
+async function filePart(uri: string, fileName: string, mimeType?: string): Promise<Blob> {
+  const type = mimeType && !mimeType.endsWith('/*') ? mimeType : mimeFromName(fileName);
+  if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('http') || uri.startsWith('data:')) {
     const response = await fetch(uri);
+    if (!response.ok) throw new ApiError('The recording file could not be read.');
     const blob = await response.blob();
     if (typeof File !== 'undefined') {
-      return new File([blob], fileName, { type: mimeType || 'audio/mpeg' });
+      return new File([blob], fileName, { type });
     }
     return blob;
   }
-  return { uri, name: fileName, type: mimeType || 'audio/mpeg' };
+  // Android's Blob cannot be built from file bytes. Expo fetch reads a bytes() method instead.
+  const source = await readableNativeFile(uri, fileName);
+  return {
+    name: fileName,
+    type,
+    bytes: () => source.bytes(),
+  } as unknown as Blob;
 }
 
 export async function pullDesk(base: string, previous: Partial<AppData> = {}): Promise<Partial<AppData>> {
